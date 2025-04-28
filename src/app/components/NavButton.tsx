@@ -1,18 +1,44 @@
-import { ReactNode } from 'react';
+// src/app/components/NavButton.tsx
+import React from 'react';
 
 interface NavButtonProps {
-    children: ReactNode;
-    onClick: () => void; // onClick снова обязателен
+    children: React.ReactNode;
+    onClick?: () => void;
+    href?: string;
     className?: string;
+    type?: 'button' | 'submit' | 'reset';
 }
 
-export default function NavButton({ children, onClick, className }: NavButtonProps) {
-    return (
-        <button
-            onClick={onClick}
-            className={`bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all ${className}`}
-        >
-            {children}
-        </button>
-    );
-}
+const NavButton = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, NavButtonProps>(
+    ({ children, onClick, href, className = '', type = 'button' }, ref) => {
+        const baseStyles = 'px-4 py-2 rounded-lg font-semibold text-white transition-colors';
+
+        if (href) {
+            return (
+                <a
+                    href={href}
+                    ref={ref as React.Ref<HTMLAnchorElement>}
+                    className={`${baseStyles} ${className}`}
+                    onClick={onClick}
+                >
+                    {children}
+                </a>
+            );
+        }
+
+        return (
+            <button
+                ref={ref as React.Ref<HTMLButtonElement>}
+                type={type}
+                onClick={onClick}
+                className={`${baseStyles} ${className}`}
+            >
+                {children}
+            </button>
+        );
+    }
+);
+
+NavButton.displayName = 'NavButton';
+
+export default NavButton;
