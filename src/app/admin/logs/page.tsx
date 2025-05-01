@@ -2,8 +2,17 @@
 
 import React, { useEffect, useState } from 'react';
 
+interface Log {
+  id: number;
+  action: string;
+  meta: Record<string, unknown>;
+  created_at: string;
+  username: string;
+  user?: string;
+}
+
 export default function AdminLogs() {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [user, setUser] = useState('');
@@ -25,8 +34,8 @@ export default function AdminLogs() {
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
       setLogs(data.logs);
       setTotal(data.total);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      if (e instanceof Error) setError(e.message);
       setLogs([]);
     } finally {
       setLoading(false);

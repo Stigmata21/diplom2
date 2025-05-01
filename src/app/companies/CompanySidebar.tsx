@@ -6,10 +6,32 @@ import FinanceTab from "./FinanceTab";
 import { useSession } from 'next-auth/react';
 import { toast } from "react-hot-toast";
 
+interface CompanyUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'admin' | 'user';
+}
+
+interface Log {
+  id: number;
+  action: string;
+  meta: Record<string, unknown>;
+  created_at: string;
+  user_id?: string;
+}
+
 interface CompanySidebarProps {
   open: boolean;
   onClose: () => void;
-  company: any;
+  company: {
+    id: string;
+    name: string;
+    user_role?: 'owner' | 'admin' | 'user';
+    logo?: string;
+    description?: string;
+    users?: CompanyUser[];
+  };
   onEmployeesChange?: () => void;
 }
 
@@ -44,7 +66,7 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
   const [deleteModal, setDeleteModal] = useState(false);
   const [ownerModal, setOwnerModal] = useState(false);
   const [newOwnerId, setNewOwnerId] = useState("");
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<Log[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
   useEffect(() => {
@@ -70,7 +92,7 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
 
   if (!open || !company) return null;
 
-  function formatLog(log: any) {
+  function formatLog(log: Log) {
     const meta = typeof log.meta === 'string' ? JSON.parse(log.meta || '{}') : log.meta || {};
     switch (log.action) {
       case 'add_employee':
@@ -203,7 +225,7 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
                     </tr>
                   </thead>
                   <tbody>
-                    {(companyData?.users || []).map((u: any) => (
+                    {(companyData?.users || []).map((u: CompanyUser) => (
                       <tr key={u.id} className="border-b">
                         <td className="p-2">{u.name}</td>
                         <td className="p-2">{u.email}</td>
@@ -286,7 +308,7 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
           open={editModal}
           onClose={() => setEditModal(false)}
           company={companyData}
-          onSave={async (data: any) => {
+          onSave={async (data: { name: string; description: string }) => {
             try {
               const res = await fetch('/api/companies', {
                 method: 'PUT',
@@ -298,8 +320,8 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
               setCompanyData(result.company);
               setEditModal(false);
               toast.success('Параметры компании обновлены');
-            } catch (e: any) {
-              toast.error(e.message);
+            } catch (e) {
+              if (e instanceof Error) toast.error(e.message);
             }
           }}
         />
@@ -339,7 +361,7 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
               onChange={e => setNewOwnerId(e.target.value)}
             >
               <option value="">Выберите пользователя</option>
-              {(companyData?.users || []).filter((u: any) => u.role !== 'owner').map((u: any) => (
+              {(companyData?.users || []).filter((u: CompanyUser) => u.role !== 'owner').map((u: CompanyUser) => (
                 <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
               ))}
             </select>
@@ -358,7 +380,7 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.error || 'Ошибка смены владельца');
                     // 2. Старый owner становится админом
-                    const oldOwner = (companyData?.users || []).find((u: any) => u.role === 'owner');
+                    const oldOwner = (companyData?.users || []).find((u: CompanyUser) => u.role === 'owner');
                     if (oldOwner && oldOwner.id !== newOwnerId) {
                       const res2 = await fetch('/api/companies/role', {
                         method: 'POST',
@@ -386,7 +408,7 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
   );
 }
 
-function EditCompanyModal({ open, onClose, company, onSave }: { open: boolean, onClose: () => void, company: any, onSave: (data: any) => void }) {
+function EditCompanyModal({ open, onClose, company, onSave }: { open: boolean, onClose: () => void, company: any, onSave: (data: { name: string; description: string }) => void }) {
   const [name, setName] = useState(company.name || '');
   const [description, setDescription] = useState(company.description || '');
   const [loading, setLoading] = useState(false);

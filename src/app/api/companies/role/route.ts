@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'companyId, userId и newRole обязательны' }, { status: 400 });
     }
     // Проверяем, что currentUserId — owner в этой компании
-    const rows = await query<any>(
+    const rows = await query<{ role_in_company: string }>(
       'SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2',
       [companyId, currentUserId]
     );
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Нет прав на смену ролей' }, { status: 403 });
     }
     // Нельзя менять роль владельцу
-    const target = await query<any>('SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
+    const target = await query<{ role_in_company: string }>('SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
     if (!target[0] || target[0].role_in_company === 'owner') {
       return NextResponse.json({ error: 'Нельзя менять роль владельцу' }, { status: 403 });
     }

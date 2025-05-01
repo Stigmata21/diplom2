@@ -49,15 +49,15 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           avatar_url: user.avatar_url,
           rememberMe: String(credentials.rememberMe) === 'true',
-        } as any;
+        };
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
+        token.id = (user as any).id;
+        token.role = (user as any).role;
         (token as any).rememberMe = (user as any).rememberMe;
       }
       return token;

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, context: { params: { companyId: str
   if (!session?.user?.id) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
   const userId = session.user.id;
   // Проверяем права: owner/admin или автор (если pending)
-  const rows = await query<any>(
+  const rows = await query<{ author_id: string; status: string; role_in_company: string }>(
     `SELECT r.author_id, r.status, cu.role_in_company FROM finance_records r
      JOIN company_users cu ON cu.company_id = r.company_id AND cu.user_id = $1
      WHERE r.id = $2 AND r.company_id = $3`,
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, context: { params: { companyId: str
   const url = `/uploads/${filename}`;
   try {
     console.log('Попытка вставки файла:', { recordId: recordIdNum, fileName: file.name });
-    const inserted = await query<any>(
+    const inserted = await query<{ id: number; filename: string; url: string; mimetype: string; size: number; created_at?: string }>(
       'INSERT INTO finance_files (record_id, filename, url, mimetype, size) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [recordIdNum, file.name, url, file.type || 'application/octet-stream', file.size]
     );
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest, context: { params: { companyId: stri
   const { recordId } = params;
   const recordIdNum = Number(recordId);
   try {
-    const files = await query<any>(
+    const files = await query<{ id: number; filename: string; url: string; mimetype: string; size: number; created_at?: string }>(
       'SELECT id, filename, url, mimetype, size FROM finance_files WHERE record_id = $1',
       [recordIdNum]
     );

@@ -10,6 +10,14 @@ interface Company {
   description?: string;
 }
 
+interface Log {
+  id: number;
+  action: string;
+  meta: Record<string, unknown>;
+  created_at: string;
+  username: string;
+}
+
 const PAGE_SIZE = 10;
 
 export default function AdminCompanies() {
@@ -23,6 +31,9 @@ export default function AdminCompanies() {
   const [editCompany, setEditCompany] = useState<Company | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   const fetchCompanies = async () => {
     setLoading(true);
@@ -33,8 +44,8 @@ export default function AdminCompanies() {
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
       setCompanies(data.companies);
       setTotal(data.total);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -51,8 +62,8 @@ export default function AdminCompanies() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка удаления');
       fetchCompanies();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -75,12 +86,25 @@ export default function AdminCompanies() {
       setShowModal(false);
       setEditCompany(null);
       fetchCompanies();
-    } catch (err: any) {
-      setModalError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setModalError(err.message);
     } finally {
       setModalLoading(false);
     }
   };
+
+  async function fetchLogs(companyId: number) {
+    setLogsLoading(true);
+    try {
+      const res = await fetch(`/api/companies/logs?companyId=${companyId}`);
+      const data = await res.json();
+      setLogs(data.logs || []);
+    } catch {
+      setLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  }
 
   return (
     <div>

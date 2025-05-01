@@ -115,10 +115,10 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+      <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Редактировать профиль</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full">
             ✕
           </button>
         </div>
@@ -129,7 +129,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
         <form onSubmit={handleSave} className="space-y-4">
           <div className="flex flex-col items-center">
             <div
-              className="w-20 h-20 rounded-full border-4 border-indigo-200 shadow mb-2 flex items-center justify-center bg-gray-100 cursor-pointer hover:shadow-lg transition relative"
+              className="w-20 h-20 rounded-full border-4 border-indigo-200 dark:border-gray-700 shadow mb-2 flex items-center justify-center bg-gray-100 dark:bg-gray-800 cursor-pointer hover:shadow-lg transition relative"
               onClick={() => fileInputRef.current?.click()}
               title="Кликните для смены аватара"
             >
@@ -148,7 +148,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
               {avatarFile && (
                 <button
                   type="button"
-                  className="absolute bottom-0 right-0 bg-indigo-600 text-white rounded-full p-1 shadow hover:bg-indigo-700"
+                  className="absolute bottom-0 right-0 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-1 shadow"
                   onClick={e => { e.stopPropagation(); }}
                   disabled={loading}
                 >
@@ -160,15 +160,15 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
 
           <div>
             <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 border rounded-lg bg-white text-gray-900 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500" required />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" required />
           </div>
 
           <div>
             <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Имя пользователя</label>
-            <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full p-3 border rounded-lg bg-white text-gray-900 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500" required />
+            <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" required />
           </div>
 
-          <div className="border-t pt-4">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <button
               type="button"
               onClick={() => setShowPasswordChange(!showPasswordChange)}
@@ -188,15 +188,15 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                 >
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Текущий пароль</label>
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-3 border rounded-lg bg-white text-gray-900 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500" autoComplete="current-password" />
+                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" autoComplete="current-password" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Новый пароль</label>
-                    <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full p-3 border rounded-lg bg-white text-gray-900 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500" autoComplete="new-password" />
+                    <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" autoComplete="new-password" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Подтвердите новый пароль</label>
-                    <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full p-3 border rounded-lg bg-white text-gray-900 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500" autoComplete="new-password" />
+                    <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" autoComplete="new-password" />
                   </div>
                   <button
                     type="button"
@@ -222,7 +222,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition"
+              className="flex-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white py-2 px-4 rounded-lg transition"
             >
               Отмена
             </button>

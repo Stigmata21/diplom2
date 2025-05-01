@@ -17,7 +17,7 @@ export async function query<T>(text: string, params?: QueryParam[]): Promise<T[]
   }
 }
 
-export async function logAdminAction(userId: string | number | null, action: string, details: any = null) {
+export async function logAdminAction(userId: string | number | null, action: string, details: unknown = null) {
   await query(
     'INSERT INTO logs (user_id, action, details) VALUES ($1, $2, $3)',
     [userId, action, details ? JSON.stringify(details) : null]

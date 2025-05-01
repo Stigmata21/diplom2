@@ -9,12 +9,12 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: 'Нет авторизации' }, { status: 401 });
-    const rows = await query(
+    const rows: { from_moderator: boolean; message: string; user_id: string; created_at: string }[] = await query(
       `SELECT * FROM support_chat WHERE user_id = $1 AND created_at > NOW() - INTERVAL '3 days' ORDER BY created_at ASC`,
       [userId]
     );
     // Маппируем для фронта
-    const messages = rows.map((row: any) => ({
+    const messages = rows.map((row: { from_moderator: boolean; message: string; user_id: string; created_at: string }) => ({
       from: row.from_moderator ? 'moderator' : 'user',
       text: row.message,
       userId: String(row.user_id),

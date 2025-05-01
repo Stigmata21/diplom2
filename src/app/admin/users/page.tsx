@@ -24,13 +24,15 @@ export default function AdminUsers() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/admin/users?search=${encodeURIComponent(search)}&page=${page}&pageSize=${pageSize}`);
+      const params = new URLSearchParams({ search, page: String(page), pageSize: String(pageSize) });
+      const res = await fetch(`/api/admin/users?${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
       setUsers(data.users);
       setTotal(data.total);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (e) {
+      if (e instanceof Error) setError(e.message);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -49,8 +51,8 @@ export default function AdminUsers() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка');
       fetchUsers();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -65,8 +67,8 @@ export default function AdminUsers() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка');
       fetchUsers();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -80,8 +82,8 @@ export default function AdminUsers() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка');
       fetchUsers();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }

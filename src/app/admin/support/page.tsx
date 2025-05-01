@@ -28,6 +28,7 @@ export default function SupportModeratorPanel() {
   const [unread, setUnread] = useState<{ [userId: string]: number }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [error, setError] = useState('');
 
   // Получаем supportAvatarUrl из settings
   useEffect(() => {
@@ -67,14 +68,19 @@ export default function SupportModeratorPanel() {
   }, [session?.user?.id, selectedUser?.id]);
 
   // История
-  useEffect(() => {
-    if (!selectedUser) return;
+  const fetchMessages = async () => {
     setLoading(true);
-    fetch(`/api/admin/support/chat?userId=${selectedUser.id}`)
-      .then(r => r.json())
-      .then(data => setMessages(data.messages || []))
-      .finally(() => setLoading(false));
-  }, [selectedUser]);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/support/chat');
+      const data = await res.json();
+      setMessages(data.messages || []);
+    } catch (e) {
+      if (e instanceof Error) setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Авто-скролл вниз
   useEffect(() => {
@@ -98,6 +104,20 @@ export default function SupportModeratorPanel() {
   function isOwnMessage(msg: Message) {
     return msg.from === "moderator" && (String(msg.moderatorId) === String(session?.user?.id) || msg.moderatorId === '1');
   }
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/support/users');
+      const data = await res.json();
+      setUsers(data.users || []);
+    } catch (e) {
+      if (e instanceof Error) setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex h-[80vh] bg-white dark:bg-gray-900 rounded-xl shadow overflow-hidden animate-[fadeInUp_0.3s]">

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Нельзя удалить себя' }, { status: 403 });
     }
     // Проверяем роль удаляемого
-    const target = await query<any>('SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
+    const target = await query<{ role_in_company: string }>('SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
     if (!target[0]) {
       return NextResponse.json({ error: 'Пользователь не найден в компании' }, { status: 404 });
     }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Нельзя удалить владельца' }, { status: 403 });
     }
     // Проверяем, что currentUserId — owner или admin в этой компании
-    const rows = await query<any>(
+    const rows = await query<{ role_in_company: string }>(
       'SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2',
       [companyId, currentUserId]
     );

@@ -11,7 +11,7 @@ export async function PUT(req: NextRequest, { params }: { params: { companyId: s
   const userId = session.user.id;
   const { type, category, amount, currency, description, status } = await req.json();
   // Проверяем права: owner/admin или автор (если pending)
-  const rows = await query<any>(
+  const rows = await query<{ author_id: string; status: string; role_in_company: string }>(
     `SELECT r.author_id, r.status, cu.role_in_company FROM finance_records r
      JOIN company_users cu ON cu.company_id = r.company_id AND cu.user_id = $1
      WHERE r.id = $2 AND r.company_id = $3`,
@@ -24,7 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: { companyId: s
     return NextResponse.json({ error: 'Нет прав на редактирование записи' }, { status: 403 });
   }
   try {
-    await query<any>(
+    await query(
       `UPDATE finance_records SET type = $1, category = $2, amount = $3, currency = $4, description = $5, status = $6, updated_at = NOW() WHERE id = $7 AND company_id = $8`,
       [type, category, amount, currency, description, status, recordId, companyId]
     );
@@ -41,7 +41,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { companyId
   if (!session?.user?.id) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
   const userId = session.user.id;
   // Проверяем права: owner/admin или автор (если pending)
-  const rows = await query<any>(
+  const rows = await query<{ author_id: string; status: string; role_in_company: string }>(
     `SELECT r.author_id, r.status, cu.role_in_company FROM finance_records r
      JOIN company_users cu ON cu.company_id = r.company_id AND cu.user_id = $1
      WHERE r.id = $2 AND r.company_id = $3`,
@@ -54,7 +54,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { companyId
     return NextResponse.json({ error: 'Нет прав на удаление записи' }, { status: 403 });
   }
   try {
-    await query<any>(
+    await query(
       `DELETE FROM finance_records WHERE id = $1 AND company_id = $2`,
       [recordId, companyId]
     );

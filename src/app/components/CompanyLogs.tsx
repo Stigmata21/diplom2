@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 interface Log {
   id: number;
   action: string;
-  meta: any;
+  meta: Record<string, unknown>;
   created_at: string;
   username: string;
 }

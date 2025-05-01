@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'companyId и email обязательны' }, { status: 400 });
     }
     // Проверяем, что currentUserId — owner или admin в этой компании
-    const rows = await query<any>(
+    const rows = await query<{ role_in_company: string }>(
       'SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2',
       [companyId, currentUserId]
     );
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Нет прав на добавление сотрудников' }, { status: 403 });
     }
     // Ищем пользователя по email
-    let users = await query<any>('SELECT id, username, email FROM users WHERE email = $1', [email]);
+    let users = await query<{ id: number, username: string, email: string }>('SELECT id, username, email FROM users WHERE email = $1', [email]);
     let userId: number;
     let username: string;
     if (!users[0]) {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       const tempPassword = Math.random().toString(36).slice(2, 10) + 'A1!';
       const bcrypt = require('bcryptjs');
       const passwordHash = await bcrypt.hash(tempPassword, 10);
-      const inserted = await query<any>(
+      const inserted = await query<{ id: number }>(
         'INSERT INTO users (username, email, password, role, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING id',
         [username, email, passwordHash, 'user', true]
       );
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       username = users[0].username;
     }
     // Проверяем, не состоит ли уже в компании
-    const exists = await query<any>('SELECT 1 FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
+    const exists = await query<{ exists: number }>('SELECT 1 as exists FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
     if (exists[0]) {
       return NextResponse.json({ error: 'Пользователь уже в компании' }, { status: 409 });
     }

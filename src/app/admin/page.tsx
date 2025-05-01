@@ -1,8 +1,24 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+}
+
+interface Metrics {
+  users: number;
+  companies: number;
+  logs: number;
+  activity: { day: string; count: number }[];
+  [key: string]: any; // fallback для других ключей, если появятся
+}
+
 export default function AdminDashboard() {
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -17,6 +33,19 @@ export default function AdminDashboard() {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
+    } catch (e) {
+      if (e instanceof Error) setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">

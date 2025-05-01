@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'companyId обязателен' }, { status: 400 });
   }
   try {
-    const files = await query<any>(
+    const files = await query<{ id: number; filename: string; url: string; mimetype: string; size: number; version?: number; created_at?: string }>(
       'SELECT id, filename, url, mimetype, size, version, created_at FROM files WHERE company_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC',
       [companyId]
     );
@@ -22,17 +22,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get('file') as File | null;
-  const companyId = formData.get('companyId');
+  const companyId = String(formData.get('companyId'));
   if (!file || !companyId) {
     return NextResponse.json({ error: 'file и companyId обязательны' }, { status: 400 });
   }
   // В реальном проекте тут будет upload в S3/Cloud + генерация url
   const filename = file.name;
   const mimetype = file.type || 'application/octet-stream';
-  const size = file.size || 0;
+  const size = Number(file.size) || 0;
   const url = `/uploads/${Date.now()}_${filename}`; // Заглушка
   try {
-    const inserted = await query<any>(
+    const inserted = await query<{ id: number; filename: string; url: string; mimetype: string; size: number; version?: number; created_at?: string }>(
       'INSERT INTO files (company_id, user_id, filename, url, mimetype, size) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, filename, url, mimetype, size, version, created_at',
       [companyId, 1, filename, url, mimetype, size] // user_id=1 заглушка
     );
