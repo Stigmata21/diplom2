@@ -5,8 +5,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NavButton from './NavButton';
 import Link from 'next/link';
-import Cookies from 'js-cookie';
-import { useUserStore } from '@/lib/user-store';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { ThemeSwitcher } from '../../components/ui/ThemeSwitcher';
 import { useRouter } from 'next/navigation';
 import ProfileModal from './ProfileModal';
@@ -27,14 +26,14 @@ interface Company {
 export default function Header() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isRegister, setIsRegister] = useState(false);
-    const { user, setUser, clearUser } = useUserStore();
+    const { data: session, status } = useSession();
+    const user = session?.user;
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [username, setUsername] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
-    const [isMounted, setIsMounted] = useState(false);
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -44,43 +43,8 @@ export default function Header() {
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
     useEffect(() => {
-        setIsMounted(true);
-        console.log('Header useEffect: mounted');
-        const token = Cookies.get('token');
-        if (token) {
-            console.log('Header: about to fetch /api/me');
-            fetch('/api/me', {
-                method: 'GET',
-                credentials: 'include',
-            })
-                .then((res) => {
-                    console.log('Header: fetch /api/me response', res);
-                    if (!res.ok) {
-                        return res.json().then(() => null);
-                    }
-                    return res.json();
-                })
-                .then((data) => {
-                    console.log('Header: /api/me data', data);
-                    if (data?.user) {
-                        setUser(data.user);
-                    } else {
-                        clearUser();
-                    }
-                })
-                .catch((err) => {
-                    console.log('Header: fetch /api/me error', err);
-                    clearUser();
-                });
-        } else {
-            clearUser();
-        }
-    }, [setUser, clearUser]);
-
-    // Fetch companies for switcher
-    useEffect(() => {
         if (user) {
-            fetch('/api/companies', { credentials: 'include' })
+            fetch('/api/companies')
                 .then(res => res.json())
                 .then(data => {
                     if (data.companies) {
@@ -110,8 +74,6 @@ export default function Header() {
         e.preventDefault();
         setError('');
         setLoading(true);
-
-        // Валидация на клиенте
         if (!email || !email.includes('@')) {
             setError('Введите корректный email');
             setLoading(false);
@@ -133,52 +95,62 @@ export default function Header() {
                 setLoading(false);
                 return;
             }
+            const res = await signIn('credentials', {
+                username,
+                email,
+                password,
+                redirect: false,
+                isRegister: true,
+                rememberMe,
+            });
+            if (res?.error) {
+                setError(res.error);
+            } else {
+                if (rememberMe) {
+                    await fetch('/api/auth/remember', { method: 'POST' });
+                }
+                setIsAuthOpen(false);
+                setEmail('');
+                setPassword('');
+                setConfirmPassword('');
+                setUsername('');
+                setRememberMe(false);
+            }
+            setLoading(false);
+            return;
         } else {
             if (!password) {
                 setError('Введите пароль');
                 setLoading(false);
                 return;
             }
-        }
-
-        try {
-            let url;
-            if (isRegister) {
-                url = `/api/register?username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+            const res = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
+                rememberMe,
+            });
+            if (res?.error) {
+                setError(res.error);
             } else {
-                url = `/api/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&rememberMe=${rememberMe}`;
+                if (rememberMe) {
+                    await fetch('/api/auth/remember', { method: 'POST' });
+                }
+                setIsAuthOpen(false);
+                setEmail('');
+                setPassword('');
+                setConfirmPassword('');
+                setUsername('');
+                setRememberMe(false);
             }
-            const response = await fetch(url); // GET-запрос
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.error || 'Ошибка запроса');
-            }
-            setUser(data.user);
-            setIsAuthOpen(false);
-            setEmail('');
-            setPassword('');
-            setConfirmPassword('');
-            setUsername('');
-            setRememberMe(false);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
-        } finally {
             setLoading(false);
+            return;
         }
     };
 
     const handleLogout = async () => {
-        try {
-            await fetch('/api/logout', {
-                method: 'POST',
-                credentials: 'include',
-            });
-            Cookies.remove('token');
-            clearUser();
-            setIsProfileOpen(false);
-        } catch (err) {
-            // silent
-        }
+        await signOut({ redirect: false });
+        setIsProfileOpen(false);
     };
 
     const profileVariants = {
@@ -202,7 +174,7 @@ export default function Header() {
                     className="w-10 h-10 rounded-full mr-3"
                 />
                 <div>
-                    <p className="font-semibold">{user?.username}</p>
+                    <p className="font-semibold">{user?.name}</p>
                     <p className="text-sm text-gray-600">{user?.email}</p>
                 </div>
             </div>
@@ -234,7 +206,7 @@ export default function Header() {
         </motion.div>
     );
 
-    if (!isMounted) {
+    if (!user) {
         return (
             <header className="fixed top-0 w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-4 shadow-lg z-10">
                 <div className="container mx-auto px-6 flex justify-between items-center">
@@ -249,107 +221,10 @@ export default function Header() {
                         <a href="#pricing" className="text-white hover:text-yellow-300 transition-colors text-lg">
                             Тарифы
                         </a>
-                        <NavButton className="bg-indigo-700 hover:bg-indigo-800">Войти</NavButton>
+                        <NavButton onClick={() => setIsAuthOpen(true)} className="bg-indigo-700 hover:bg-indigo-800">Войти</NavButton>
                     </nav>
                 </div>
-            </header>
-        );
-    }
-
-    return (
-        <header className="fixed top-0 w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-4 shadow-lg z-10">
-            <div className="container mx-auto px-4 flex justify-between items-center">
-                <div className="flex items-center">
-                    <img src="/logo.png" alt="Логотип" className="h-12 mr-3" />
-                    <span className="text-2xl font-bold">CompanySync</span>
-                    {user && (
-                        <Link href="/companies" className="ml-6 text-white hover:text-yellow-300 transition-colors text-lg">
-                            Компании
-                        </Link>
-                    )}
-                </div>
-                {/* Desktop nav */}
-                <nav className="hidden md:flex items-center space-x-4">
-                    <a
-                        href="#about"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            scrollToSection('about')();
-                        }}
-                        className="text-white hover:text-yellow-300 transition-colors text-lg"
-                    >
-                        О нас
-                    </a>
-                    <a
-                        href="#pricing"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            scrollToSection('pricing')();
-                        }}
-                        className="text-white hover:text-yellow-300 transition-colors text-lg"
-                    >
-                        Тарифы
-                    </a>
-                    {user && (
-                        <div className="relative">
-                            <img
-                                src={user.avatar_url || 'https://via.placeholder.com/32'}
-                                alt="Аватар"
-                                className="w-8 h-8 rounded-full cursor-pointer"
-                                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                            />
-                            <AnimatePresence>
-                                {isProfileOpen && renderProfileDropdown()}
-                            </AnimatePresence>
-                        </div>
-                    )}
-                    {!user && (
-                        <NavButton onClick={() => setIsAuthOpen(!isAuthOpen)} className="bg-indigo-700 hover:bg-indigo-800">
-                            Войти
-                        </NavButton>
-                    )}
-                    <ThemeSwitcher />
-                </nav>
-                {/* Mobile nav */}
-                <div className="md:hidden flex items-center space-x-2">
-                    <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="focus:outline-none">
-                        <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-                    <ThemeSwitcher />
-                </div>
-                {/* Mobile menu dropdown */}
-                {mobileMenuOpen && (
-                    <div className="absolute top-full left-0 w-full bg-white text-gray-800 shadow-lg z-50 md:hidden animate-fade-in">
-                        <nav className="flex flex-col p-4 space-y-2">
-                            <a
-                                href="#about"
-                                onClick={(e) => { e.preventDefault(); scrollToSection('about')(); setMobileMenuOpen(false); }}
-                                className="text-lg py-2 px-2 rounded hover:bg-indigo-50"
-                            >О нас</a>
-                            <a
-                                href="#pricing"
-                                onClick={(e) => { e.preventDefault(); scrollToSection('pricing')(); setMobileMenuOpen(false); }}
-                                className="text-lg py-2 px-2 rounded hover:bg-indigo-50"
-                            >Тарифы</a>
-                            {user ? (
-                                <button
-                                    className="flex items-center space-x-2 py-2 px-2 rounded hover:bg-indigo-50"
-                                    onClick={() => { setIsProfileOpen(!isProfileOpen); setMobileMenuOpen(false); }}
-                                >
-                                    <img src={user.avatar_url || 'https://via.placeholder.com/32'} alt="Аватар" className="w-8 h-8 rounded-full" />
-                                    <span>{user.username}</span>
-                                </button>
-                            ) : (
-                                <NavButton onClick={() => { setIsAuthOpen(true); setMobileMenuOpen(false); }} className="bg-indigo-700 hover:bg-indigo-800 w-full">
-                                    Войти
-                                </NavButton>
-                            )}
-                        </nav>
-                    </div>
-                )}
-                {isAuthOpen && !user && (
+                {isAuthOpen && (
                     <div className="absolute top-full right-0 mt-2 w-80 bg-white text-gray-800 rounded-xl shadow-xl p-6 z-50 border border-gray-100 max-h-[calc(100vh-100px)] overflow-y-auto">
                         <h3 className="font-bold text-xl mb-4 text-indigo-600">
                             {isRegister ? 'Регистрация' : 'Вход'}
@@ -416,6 +291,103 @@ export default function Header() {
                                 </button>
                             </p>
                         </form>
+                    </div>
+                )}
+            </header>
+        );
+    }
+
+    return (
+        <header className="fixed top-0 w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-4 shadow-lg z-10">
+            <div className="container mx-auto px-4 flex justify-between items-center">
+                <div className="flex items-center">
+                    <img src="/logo.png" alt="Логотип" className="h-12 mr-3" />
+                    <span className="text-2xl font-bold">CompanySync</span>
+                    {user && (
+                        <Link href="/companies" className="ml-6 text-white hover:text-yellow-300 transition-colors text-lg">
+                            Компании
+                        </Link>
+                    )}
+                </div>
+                {/* Desktop nav */}
+                <nav className="hidden md:flex items-center space-x-4">
+                    <a
+                        href="#about"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            scrollToSection('about')();
+                        }}
+                        className="text-white hover:text-yellow-300 transition-colors text-lg"
+                    >
+                        О нас
+                    </a>
+                    <a
+                        href="#pricing"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            scrollToSection('pricing')();
+                        }}
+                        className="text-white hover:text-yellow-300 transition-colors text-lg"
+                    >
+                        Тарифы
+                    </a>
+                    {user && (
+                        <div className="relative">
+                            <img
+                                src={user.avatar_url || 'https://via.placeholder.com/32'}
+                                alt="Аватар"
+                                className="w-8 h-8 rounded-full cursor-pointer"
+                                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                            />
+                            <AnimatePresence>
+                                {isProfileOpen && renderProfileDropdown()}
+                            </AnimatePresence>
+                        </div>
+                    )}
+                    {!user && (
+                        <NavButton onClick={() => setIsAuthOpen(true)} className="bg-indigo-700 hover:bg-indigo-800">
+                            Войти
+                        </NavButton>
+                    )}
+                    <ThemeSwitcher />
+                </nav>
+                {/* Mobile nav */}
+                <div className="md:hidden flex items-center space-x-2">
+                    <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="focus:outline-none">
+                        <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <ThemeSwitcher />
+                </div>
+                {/* Mobile menu dropdown */}
+                {mobileMenuOpen && (
+                    <div className="absolute top-full left-0 w-full bg-white text-gray-800 shadow-lg z-50 md:hidden animate-fade-in">
+                        <nav className="flex flex-col p-4 space-y-2">
+                            <a
+                                href="#about"
+                                onClick={(e) => { e.preventDefault(); scrollToSection('about')(); setMobileMenuOpen(false); }}
+                                className="text-lg py-2 px-2 rounded hover:bg-indigo-50"
+                            >О нас</a>
+                            <a
+                                href="#pricing"
+                                onClick={(e) => { e.preventDefault(); scrollToSection('pricing')(); setMobileMenuOpen(false); }}
+                                className="text-lg py-2 px-2 rounded hover:bg-indigo-50"
+                            >Тарифы</a>
+                            {user ? (
+                                <button
+                                    className="flex items-center space-x-2 py-2 px-2 rounded hover:bg-indigo-50"
+                                    onClick={() => { setIsProfileOpen(!isProfileOpen); setMobileMenuOpen(false); }}
+                                >
+                                    <img src={user.avatar_url || 'https://via.placeholder.com/32'} alt="Аватар" className="w-8 h-8 rounded-full" />
+                                    <span>{user.name}</span>
+                                </button>
+                            ) : (
+                                <NavButton onClick={() => { setIsAuthOpen(true); setMobileMenuOpen(false); }} className="bg-indigo-700 hover:bg-indigo-800 w-full">
+                                    Войти
+                                </NavButton>
+                            )}
+                        </nav>
                     </div>
                 )}
             </div>

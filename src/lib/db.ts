@@ -15,4 +15,11 @@ export async function query<T>(text: string, params?: QueryParam[]): Promise<T[]
     console.error('Database query error:', error);
     throw error;
   }
+}
+
+export async function logAdminAction(userId: string | number | null, action: string, details: any = null) {
+  await query(
+    'INSERT INTO logs (user_id, action, details) VALUES ($1, $2, $3)',
+    [userId, action, details ? JSON.stringify(details) : null]
+  );
 } 

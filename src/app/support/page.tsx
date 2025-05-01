@@ -4,20 +4,22 @@
 import { useState, useEffect } from 'react';
 import NavButton from '../components/NavButton';
 import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/lib/user-store';
+import { useSession } from 'next-auth/react';
 
 export default function Support() {
-    const { user } = useUserStore();
+    const { data: session, status } = useSession();
+    const user = session?.user;
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const router = useRouter();
 
     useEffect(() => {
+        if (status === 'loading') return;
         if (!user) {
             router.push('/');
         }
-    }, [user, router]);
+    }, [user, status, router]);
 
     const handleSubmitSupport = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,8 +48,11 @@ export default function Support() {
         }
     };
 
-    if (!user) {
+    if (status === 'loading') {
         return <div className="text-center text-white">Загрузка...</div>;
+    }
+    if (!user) {
+        return null;
     }
 
     return (
