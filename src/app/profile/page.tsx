@@ -3,9 +3,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
-import { useUserStore } from '@/lib/user-store';
+import { useSession } from 'next-auth/react';
 import { Skeleton } from '../../components/ui/skeleton';
+import { useTranslations } from 'next-intl';
 
 interface User {
     id: number;
@@ -15,10 +15,12 @@ interface User {
 }
 
 export default function Profile() {
-    const { user, setUser } = useUserStore();
+    const t = useTranslations('Profile');
+    const { data: session, status } = useSession();
+    const user = session?.user;
     const router = useRouter();
     const [editMode, setEditMode] = useState(false);
-    const [username, setUsername] = useState(user?.username || '');
+    const [username, setUsername] = useState(user?.name || '');
     const [email, setEmail] = useState(user?.email || '');
     const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
     const [password, setPassword] = useState('');
@@ -35,24 +37,18 @@ export default function Profile() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
+        if (status === 'loading') return;
         if (!user) {
             router.push('/');
         }
-    }, [user, router]);
+    }, [user, status, router]);
 
-    if (!user) return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-2">
-            <div className="bg-white p-2 sm:p-4 md:p-8 rounded-2xl shadow-2xl w-full max-w-lg">
-                <div className="flex flex-col items-center mb-6">
-                    <Skeleton className="w-20 h-20 rounded-full mb-2" />
-                    <Skeleton className="h-6 w-32 mb-2" />
-                    <Skeleton className="h-4 w-48" />
-                </div>
-                <Skeleton className="h-10 w-full mb-4" />
-                <Skeleton className="h-10 w-full mb-4" />
-            </div>
-        </div>
-    );
+    if (status === 'loading') {
+        return <div className="text-center text-white">Загрузка...</div>;
+    }
+    if (!user) {
+        return null;
+    }
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -68,7 +64,9 @@ export default function Profile() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Ошибка обновления профиля');
-            setUser({ ...user, username, email, avatar_url: avatarUrl });
+            setUsername(data.username);
+            setEmail(data.email);
+            setAvatarUrl(data.avatar_url || '');
             setSuccess('Профиль обновлён!');
             setEditMode(false);
         } catch (err: any) {
@@ -144,7 +142,8 @@ export default function Profile() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Ошибка загрузки аватара');
             setAvatarUrl(data.url);
-            setUser({ ...user, avatar_url: data.url });
+            setUsername(data.username);
+            setEmail(data.email);
             setSuccess('Аватар обновлён!');
         } catch (err: any) {
             setError(err.message);
@@ -193,8 +192,8 @@ export default function Profile() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Неверный код');
-            setUser({ ...user, email: pendingEmail });
-            setEmail(pendingEmail);
+            setUsername(data.username);
+            setEmail(data.email);
             setPendingEmail('');
             setEmailCode('');
             setEmailStep('idle');
@@ -209,7 +208,7 @@ export default function Profile() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-indigo-600 to-blue-500 flex items-center justify-center py-4 md:py-12 p-2">
             <div className="bg-white p-2 sm:p-4 md:p-8 rounded-2xl shadow-2xl w-full max-w-lg">
-                <h1 className="text-3xl font-bold mb-6 text-indigo-700 text-center">Профиль</h1>
+                <h1 className="text-3xl font-bold mb-6 text-indigo-700 text-center">{t('profile_title')}</h1>
                 <div className="flex flex-col items-center mb-6">
                     <div
                         className="w-20 h-20 rounded-full border-4 border-indigo-200 shadow mb-2 flex items-center justify-center bg-gray-100 cursor-pointer hover:shadow-lg transition relative"
@@ -243,7 +242,7 @@ export default function Profile() {
                     </div>
                     {!editMode ? (
                         <>
-                            <p className="font-semibold text-lg">{user.username}</p>
+                            <p className="font-semibold text-lg">{user.name}</p>
                             <p className="text-gray-500">{user.email}</p>
                         </>
                     ) : null}
@@ -256,20 +255,20 @@ export default function Profile() {
                             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg mb-2 transition"
                             onClick={() => setEditMode(true)}
                         >
-                            Редактировать профиль
+                            {t('edit_profile')}
                         </button>
                         <button
                             className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg mb-2 transition"
                             onClick={() => router.push('/')}
                         >
-                            На главную
+                            {t('logout')}
                         </button>
                         <details className="mt-4">
-                            <summary className="cursor-pointer text-indigo-600 font-semibold">Сменить пароль</summary>
+                            <summary className="cursor-pointer text-indigo-600 font-semibold">{t('change_password')}</summary>
                             <form onSubmit={handlePasswordChange} className="space-y-3 mt-3">
                                 <input
                                     type="password"
-                                    placeholder="Текущий пароль"
+                                    placeholder={t('current_password')}
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -277,7 +276,7 @@ export default function Profile() {
                                 />
                                 <input
                                     type="password"
-                                    placeholder="Новый пароль"
+                                    placeholder={t('new_password')}
                                     value={newPassword}
                                     onChange={e => setNewPassword(e.target.value)}
                                     className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -285,7 +284,7 @@ export default function Profile() {
                                 />
                                 <input
                                     type="password"
-                                    placeholder="Повторите новый пароль"
+                                    placeholder={t('confirm_new_password')}
                                     value={confirmPassword}
                                     onChange={e => setConfirmPassword(e.target.value)}
                                     className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -296,7 +295,7 @@ export default function Profile() {
                                     className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition"
                                     disabled={loading}
                                 >
-                                    {loading ? 'Сохраняю...' : 'Сменить пароль'}
+                                    {loading ? 'Сохраняю...' : t('change_password')}
                                 </button>
                             </form>
                         </details>
@@ -304,7 +303,7 @@ export default function Profile() {
                 ) : (
                     <form onSubmit={handleSave} className="space-y-3 md:space-y-4">
                         <div>
-                            <label className="block text-sm font-semibold mb-1 text-gray-700">Имя пользователя</label>
+                            <label className="block text-sm font-semibold mb-1 text-gray-700">{t('username')}</label>
                             <input
                                 type="text"
                                 value={username}
@@ -314,7 +313,7 @@ export default function Profile() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold mb-1 text-gray-700">Email</label>
+                            <label className="block text-sm font-semibold mb-1 text-gray-700">{t('email')}</label>
                             <div className="flex space-x-2">
                                 <input
                                     type="email"
@@ -327,56 +326,57 @@ export default function Profile() {
                                 <button
                                     type="button"
                                     className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-lg text-sm"
-                                    onClick={() => setEmailStep('idle') || setPendingEmail('')}
+                                    onClick={() => {
+                                        setEmailStep('idle');
+                                        setPendingEmail('');
+                                    }}
                                 >
-                                    Сменить
+                                    {t('change')}
                                 </button>
                             </div>
-                            {emailStep !== 'idle' && (
+                            {emailStep === 'idle' && (
                                 <div className="mt-2 space-y-2">
-                                    {emailStep === 'idle' && (
-                                        <div className="flex space-x-2">
-                                            <input
-                                                type="email"
-                                                value={pendingEmail}
-                                                onChange={e => setPendingEmail(e.target.value)}
-                                                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                placeholder="Новый email"
-                                            />
-                                            <button
-                                                type="button"
-                                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm"
-                                                onClick={handleSendEmailCode}
-                                                disabled={loading}
-                                            >
-                                                {loading ? '...' : 'Получить код'}
-                                            </button>
-                                        </div>
-                                    )}
-                                    {emailStep === 'sent' && (
-                                        <div className="flex space-x-2">
-                                            <input
-                                                type="text"
-                                                value={emailCode}
-                                                onChange={e => setEmailCode(e.target.value)}
-                                                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                placeholder="Код из email"
-                                            />
-                                            <button
-                                                type="button"
-                                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm"
-                                                onClick={handleVerifyEmailCode}
-                                                disabled={loading}
-                                            >
-                                                {loading ? '...' : 'Подтвердить'}
-                                            </button>
-                                        </div>
-                                    )}
+                                    <div className="flex space-x-2">
+                                        <input
+                                            type="email"
+                                            value={pendingEmail}
+                                            onChange={e => setPendingEmail(e.target.value)}
+                                            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder={t('new_email')}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm"
+                                            onClick={handleSendEmailCode}
+                                            disabled={loading}
+                                        >
+                                            {loading ? '...' : t('get_code')}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            {emailStep === 'sent' && (
+                                <div className="flex space-x-2">
+                                    <input
+                                        type="text"
+                                        value={emailCode}
+                                        onChange={e => setEmailCode(e.target.value)}
+                                        className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        placeholder={t('code_from_email')}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm"
+                                        onClick={handleVerifyEmailCode}
+                                        disabled={loading}
+                                    >
+                                        {loading ? '...' : t('verify')}
+                                    </button>
                                 </div>
                             )}
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold mb-1 text-gray-700">Аватар (URL)</label>
+                            <label className="block text-sm font-semibold mb-1 text-gray-700">{t('avatar_url')}</label>
                             <input
                                 type="url"
                                 value={avatarUrl}
@@ -391,21 +391,21 @@ export default function Profile() {
                                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition"
                                 disabled={loading}
                             >
-                                {loading ? 'Сохраняю...' : 'Сохранить'}
+                                {loading ? 'Сохраняю...' : t('save')}
                             </button>
                             <button
                                 type="button"
                                 className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition"
                                 onClick={() => {
                                     setEditMode(false);
-                                    setUsername(user.username);
+                                    setUsername(user.name);
                                     setEmail(user.email);
                                     setAvatarUrl(user.avatar_url || '');
                                     setError('');
                                     setSuccess('');
                                 }}
                             >
-                                Отмена
+                                {t('cancel')}
                             </button>
                         </div>
                     </form>

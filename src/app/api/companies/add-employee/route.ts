@@ -1,22 +1,16 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/route';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../../lib/db';
-import { verifyToken } from '@/lib/jwt';
-
-function getUserIdFromRequest(request: NextRequest): number | null {
-  const token = request.cookies.get('token')?.value;
-  if (!token) return null;
-  const decoded = verifyToken(token);
-  if (!decoded) return null;
-  return decoded.id;
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const { companyId, email } = await request.json();
-    const currentUserId = getUserIdFromRequest(request);
-    if (!currentUserId) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
+    const currentUserId = session.user.id;
+    const { companyId, email } = await request.json();
     if (!companyId || !email) {
       return NextResponse.json({ error: 'companyId и email обязательны' }, { status: 400 });
     }
@@ -61,6 +55,6 @@ export async function POST(request: NextRequest) {
     await query('INSERT INTO company_logs (company_id, user_id, action, meta) VALUES ($1, $2, $3, $4)', [companyId, currentUserId, 'add_employee', JSON.stringify({ addedUserId: userId, email })]);
     return NextResponse.json({ employee: { id: userId, username, email, role_in_company: 'member' } }, { status: 200 });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Internal Server Error', stack: e.stack }, { status: 500 });
+    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
   }
 } 

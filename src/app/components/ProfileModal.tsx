@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUserStore } from '@/lib/user-store';
+import { useSession } from 'next-auth/react';
 
 interface ProfileModalProps {
   open: boolean;
@@ -8,9 +8,10 @@ interface ProfileModalProps {
 }
 
 export default function ProfileModal({ open, onClose }: ProfileModalProps) {
-  const { user, setUser } = useUserStore();
+  const { data: session } = useSession();
+  const user = session?.user;
   const [email, setEmail] = useState(user?.email || '');
-  const [username, setUsername] = useState(user?.username || '');
+  const [username, setUsername] = useState(user?.name || '');
   const [avatar, setAvatar] = useState(user?.avatar_url || '');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -36,29 +37,33 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
         formData.append('avatar', avatarFile);
       }
 
-      const token = localStorage.getItem('token');
       const res = await fetch('/api/profile', {
         method: 'PUT',
         body: formData,
         credentials: 'include',
-        headers: token ? {
-          'Authorization': `Bearer ${token}`
-        } : {}
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка обновления профиля');
-      if (user) {
-        setUser({
-          ...user,
-          id: user.id,
-          username,
-          email,
-          avatar_url: data.user.avatar_url,
-          role: user.role
-        });
-      }
       setSuccess('Профиль обновлён!');
       setAvatarFile(null);
+      if (data.user) {
+        setEmail(data.user.email || '');
+        setUsername(data.user.username || '');
+        const avatarUrl = data.user.avatar_url ? data.user.avatar_url + '?t=' + Date.now() : '';
+        setAvatar(avatarUrl);
+        setAvatarPreview(avatarUrl);
+        if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
+          if (typeof (session as any)?.update === 'function') {
+            (session as any).update({
+              email: data.user.email,
+              name: data.user.username,
+              image: avatarUrl,
+              avatar_url: avatarUrl,
+            });
+          }
+          setTimeout(() => window.location.reload(), 300);
+        }
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {

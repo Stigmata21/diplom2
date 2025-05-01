@@ -7,11 +7,13 @@ interface NavButtonProps {
     href?: string;
     className?: string;
     type?: 'button' | 'submit' | 'reset';
+    disabled?: boolean;
 }
 
 const NavButton = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, NavButtonProps>(
-    ({ children, onClick, href, className = '', type = 'button' }, ref) => {
+    ({ children, onClick, href, className = '', type = 'button', disabled = false }, ref) => {
         const baseStyles = 'px-4 py-2 rounded-lg font-semibold text-white transition-colors';
+        const disabledStyles = disabled ? 'opacity-60 cursor-not-allowed' : '';
 
         if (href) {
             return (
@@ -31,7 +33,8 @@ const NavButton = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, NavBut
                 ref={ref as React.Ref<HTMLButtonElement>}
                 type={type}
                 onClick={onClick}
-                className={`${baseStyles} ${className}`}
+                className={`${baseStyles} ${className} ${disabledStyles}`}
+                disabled={disabled}
             >
                 {children}
             </button>

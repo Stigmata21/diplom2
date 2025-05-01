@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import Cookies from 'js-cookie';
+import { signIn } from 'next-auth/react';
 import NavButton from '../components/NavButton';
 
 export default function Login() {
@@ -17,27 +17,19 @@ export default function Login() {
         e.preventDefault();
         setError('');
         setLoading(true);
-
         try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-                credentials: 'include',
+            const res = await signIn('credentials', {
+                redirect: false,
+                email,
+                password,
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Ошибка при входе');
+            if (res?.error) {
+                setError(res.error === 'CredentialsSignin' ? 'Неверный email или пароль' : res.error);
+            } else {
+                router.refresh();
             }
-
-            Cookies.set('token', data.token, { expires: 7 });
-            router.push('/');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
+            setError('Ошибка при входе');
         } finally {
             setLoading(false);
         }

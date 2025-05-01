@@ -1,9 +1,9 @@
 "use client";
 import React from "react";
-import { useUserStore } from "@/lib/user-store";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
+import { useSession } from 'next-auth/react';
 
 const adminMenu = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
@@ -11,18 +11,24 @@ const adminMenu = [
   { href: "/admin/companies", label: "Компании", icon: "🏢" },
   { href: "/admin/logs", label: "Логи", icon: "📜" },
   { href: "/admin/settings", label: "Настройки", icon: "⚙️" },
+  { href: "/admin/support", label: "Чат поддержки", icon: "💬" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useUserStore();
+  const { data: session, status } = useSession();
+  const user = session?.user;
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
-    if (!user || user.role !== "admin") router.push("/");
-  }, [user, router]);
+    if (status === 'loading') return;
+    if (!user || user.role !== 'admin') router.push('/');
+  }, [user, status, router]);
   React.useEffect(() => { setOpen(false); }, [pathname]);
+
+  if (status === 'loading') return null;
+  if (!user || user.role !== 'admin') return null;
 
   return (
     <div className="min-h-screen flex bg-gradient-to-b from-indigo-50 to-blue-100 dark:from-gray-900 dark:to-gray-950">

@@ -1,22 +1,16 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/route';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../../lib/db';
-import { verifyToken } from '@/lib/jwt';
-
-function getUserIdFromRequest(request: NextRequest): number | null {
-  const token = request.cookies.get('token')?.value;
-  if (!token) return null;
-  const decoded = verifyToken(token);
-  if (!decoded) return null;
-  return decoded.id;
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const { companyId, userId } = await request.json();
-    const currentUserId = getUserIdFromRequest(request);
-    if (!currentUserId) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
+    const currentUserId = session.user.id;
+    const { companyId, userId } = await request.json();
     if (!companyId || !userId) {
       return NextResponse.json({ error: 'companyId и userId обязательны' }, { status: 400 });
     }
@@ -43,8 +37,8 @@ export async function POST(request: NextRequest) {
     await query('DELETE FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
     // Логируем удаление сотрудника
     await query('INSERT INTO company_logs (company_id, user_id, action, meta) VALUES ($1, $2, $3, $4)', [companyId, currentUserId, 'remove_employee', JSON.stringify({ removedUserId: userId })]);
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json({ message: 'Сотрудник удалён' }, { status: 200 });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Internal Server Error', stack: e.stack }, { status: 500 });
+    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
   }
 } 

@@ -4,13 +4,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Inter } from 'next/font/google';
 import './globals.css'
 import { ThemeProvider } from 'next-themes';
+import { SessionProvider } from 'next-auth/react';
+import { Toaster } from 'react-hot-toast';
+import dynamic from 'next/dynamic';
 
 const inter = Inter({ subsets: ['latin'] });
+const SupportChatWidget = dynamic(() => import('@/components/support/SupportChatWidget'), { ssr: false });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="ru" suppressHydrationWarning>
         <body className={inter.className}>
+        <SessionProvider>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <AnimatePresence mode="wait">
                 <motion.div
@@ -23,7 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     {children}
                 </motion.div>
             </AnimatePresence>
+            <Toaster position="top-right" />
+            <SupportChatWidget />
         </ThemeProvider>
+        </SessionProvider>
         </body>
         </html>
     );
