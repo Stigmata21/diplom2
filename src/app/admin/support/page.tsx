@@ -47,7 +47,13 @@ export default function SupportModeratorPanel() {
   // ws connect
   useEffect(() => {
     if (!session?.user?.id) return;
-    const socket = new window.WebSocket(`ws://localhost:4001/?userId=${session.user.id}&moderator=1`);
+    let wsBase = '';
+    if (typeof window !== 'undefined') {
+      wsBase = process.env.NEXT_PUBLIC_WS_URL || (window.location.protocol === 'https:'
+        ? `wss://${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
+        : `ws://${window.location.hostname}:4001`);
+    }
+    const socket = new window.WebSocket(`${wsBase}/?userId=${session.user.id}&moderator=1`);
     socket.onmessage = e => {
       try {
         const msg = JSON.parse(e.data);
@@ -69,10 +75,11 @@ export default function SupportModeratorPanel() {
 
   // История
   const fetchMessages = async () => {
+    if (!selectedUser) return;
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/support/chat');
+      const res = await fetch(`/api/admin/support/chat?userId=${selectedUser.id}`);
       const data = await res.json();
       setMessages(data.messages || []);
     } catch (e) {
@@ -90,6 +97,11 @@ export default function SupportModeratorPanel() {
   // Сброс счётчика при открытии чата
   useEffect(() => {
     if (selectedUser) setUnread(u => ({ ...u, [selectedUser.id]: 0 }));
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (selectedUser) fetchMessages();
+    // eslint-disable-next-line
   }, [selectedUser]);
 
   const handleSend = () => {

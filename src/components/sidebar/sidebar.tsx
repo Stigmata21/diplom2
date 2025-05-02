@@ -6,7 +6,7 @@ import { ThemeSwitcher } from "../ui/ThemeSwitcher";
 
 const menu = [
   { href: "/companies", label: "Компании", icon: "🏢" },
-  { href: "/support", label: "Поддержка", icon: "💬" },
+  { href: "/companies/files", label: "Файлы компании", icon: "📁" },
 ];
 
 export function Sidebar() {

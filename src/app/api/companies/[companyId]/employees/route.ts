@@ -7,14 +7,23 @@ export async function GET(req: NextRequest, { params }: { params: { companyId: s
   if (!companyId) return NextResponse.json({ error: 'companyId обязателен' }, { status: 400 });
   try {
     const employees = await query<any>(
-      `SELECT u.id, u.username, u.email, cu.role_in_company as role, cu.salary, cu.note
+      `SELECT u.id, u.username, u.email, cu.role_in_company, cu.salary, cu.note
        FROM company_users cu
        JOIN users u ON cu.user_id = u.id
        WHERE cu.company_id = $1
        ORDER BY cu.role_in_company DESC, u.username ASC`,
       [companyId]
     );
-    return NextResponse.json({ employees }, { status: 200 });
+    // Маппинг ролей для фронта
+    const mapped = employees.map((e: any) => ({
+      id: e.id,
+      name: e.username || '',
+      email: e.email || '',
+      role: e.role_in_company === 'owner' ? 'owner' : e.role_in_company === 'admin' ? 'admin' : 'employee',
+      salary: e.salary || 0,
+      note: e.note || '',
+    }));
+    return NextResponse.json({ employees: mapped }, { status: 200 });
   } catch (e) {
     return NextResponse.json({ error: 'Ошибка получения сотрудников' }, { status: 500 });
   }

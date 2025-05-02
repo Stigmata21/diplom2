@@ -4,7 +4,7 @@ interface Employee {
   id: string;
   name: string;
   email: string;
-  role: 'owner' | 'admin' | 'employee';
+  role: 'owner' | 'admin' | 'member';
   salary: number;
   note?: string;
 }
@@ -24,6 +24,11 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Получаем id текущего пользователя (пример: window.__userId, заменить на актуальный способ)
+  const userId = (typeof window !== 'undefined' && (window as any).__userId) || '';
+  const currentUser = employees.find(e => e.id === userId);
+  const userRole = currentUser?.role || 'member';
+
   async function fetchEmployees() {
     setLoading(true); setError('');
     try {
@@ -32,7 +37,7 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки сотрудников');
       setEmployees((data.employees || []).map((e: any) => ({
         id: e.id,
-        name: e.username,
+        name: e.name,
         email: e.email,
         role: e.role,
         salary: e.salary || 0,
@@ -49,8 +54,8 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
   useEffect(() => { if (companyId) fetchEmployees(); }, [companyId]);
 
   const filtered = employees.filter(e =>
-    e.name.toLowerCase().includes(search.toLowerCase()) ||
-    e.email.toLowerCase().includes(search.toLowerCase())
+    (e.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (e.email || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const handleDelete = async () => {
@@ -100,10 +105,10 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
           ) : filtered.map(emp => (
             <li key={emp.id} className="py-2 sm:py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
               <div>
-                <div className="font-semibold text-indigo-700 text-xs sm:text-base">{emp.name}</div>
-                <div className="text-xs text-gray-500">{emp.email}</div>
-                <div className="text-xs text-gray-400">{emp.role} • {emp.salary}₽</div>
-                {emp.note && <div className="text-xs text-gray-500 mt-1 italic">Заметка: {emp.note}</div>}
+                <div className="font-bold text-indigo-800 text-xs sm:text-base">{emp.name}</div>
+                <div className="text-xs text-gray-700">{emp.email}</div>
+                <div className="text-xs text-gray-700">{emp.role === 'owner' ? 'Владелец' : emp.role === 'admin' ? 'Админ' : 'Пользователь'} • {emp.salary}₽</div>
+                {emp.note && <div className="text-xs text-gray-700 mt-1 italic">Заметка: {emp.note}</div>}
               </div>
               {canEdit && (
                 <div className="flex gap-1 sm:gap-2 mt-2 sm:mt-0">
@@ -156,6 +161,7 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
             }
           }}
           initial={editEmployee}
+          isOwner={userRole === 'owner'}
         />
       )}
       {deleteEmployee && (
@@ -174,15 +180,16 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
   );
 }
 
-function EmployeeModal({ open, onClose, onSave, initial }: {
+function EmployeeModal({ open, onClose, onSave, initial, isOwner }: {
   open: boolean;
   onClose: () => void;
   onSave: (emp: Employee) => void;
   initial: Employee | null;
+  isOwner: boolean;
 }) {
   const [name, setName] = useState(initial?.name || '');
   const [email, setEmail] = useState(initial?.email || '');
-  const [role, setRole] = useState<Employee['role']>(initial?.role || 'employee');
+  const [role, setRole] = useState<Employee['role']>(initial?.role || 'member');
   const [salary, setSalary] = useState(initial?.salary || 0);
   const [note, setNote] = useState(initial?.note || '');
   return (
@@ -192,11 +199,15 @@ function EmployeeModal({ open, onClose, onSave, initial }: {
         <form onSubmit={e => { e.preventDefault(); onSave({ id: initial?.id || Math.random().toString(), name, email, role, salary, note }); }} className="space-y-3">
           <input type="text" placeholder="Имя" value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border rounded-lg" required />
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-lg" required />
-          <select value={role} onChange={e => setRole(e.target.value as Employee['role'])} className="w-full p-2 border rounded-lg">
-            <option value="employee">Сотрудник</option>
-            <option value="admin">Админ</option>
-            <option value="owner">Владелец</option>
-          </select>
+          {isOwner ? (
+            <select value={role} onChange={e => setRole(e.target.value as Employee['role'])} className="w-full p-2 border rounded-lg">
+              <option value="member">Сотрудник</option>
+              <option value="admin">Админ</option>
+              <option value="owner">Владелец</option>
+            </select>
+          ) : (
+            <div className="w-full p-2 border rounded-lg bg-gray-100 text-gray-700">{role === 'owner' ? 'Владелец' : role === 'admin' ? 'Админ' : 'Сотрудник'}</div>
+          )}
           <input type="number" placeholder="Зарплата" value={salary} onChange={e => setSalary(Number(e.target.value))} className="w-full p-2 border rounded-lg" min={0} />
           <textarea placeholder="Заметка" value={note} onChange={e => setNote(e.target.value)} className="w-full p-2 border rounded-lg" rows={2} />
           <div className="flex gap-2 mt-4">

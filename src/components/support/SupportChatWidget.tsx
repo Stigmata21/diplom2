@@ -42,7 +42,13 @@ export default function SupportChatWidget() {
   // ws connect
   useEffect(() => {
     if (!session?.user?.id) return;
-    const socket = new window.WebSocket(`ws://localhost:4001/?userId=${session.user.id}`);
+    let wsBase = '';
+    if (typeof window !== 'undefined') {
+      wsBase = process.env.NEXT_PUBLIC_WS_URL || (window.location.protocol === 'https:'
+        ? `wss://${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
+        : `ws://${window.location.hostname}:4001`);
+    }
+    const socket = new window.WebSocket(`${wsBase}/?userId=${session.user.id}`);
     socket.onmessage = e => {
       try {
         const msg = JSON.parse(e.data);
@@ -105,12 +111,6 @@ export default function SupportChatWidget() {
   // Функция для определения, что сообщение своё
   function isOwnMessage(msg: Message) {
     return msg.from === "user" && String(msg.userId) === String(session?.user?.id);
-  }
-
-  // DEBUG
-  if (typeof window !== 'undefined') {
-    console.log('session.user.id', session?.user?.id);
-    console.log('messages', messages);
   }
 
   return (

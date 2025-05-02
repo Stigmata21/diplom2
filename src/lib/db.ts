@@ -12,7 +12,6 @@ export async function query<T>(text: string, params?: QueryParam[]): Promise<T[]
     const result = await pool.query(text, params);
     return result.rows;
   } catch (error) {
-    console.error('Database query error:', error);
     throw error;
   }
 }

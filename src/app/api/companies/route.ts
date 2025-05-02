@@ -144,10 +144,13 @@ export async function PUT(request: Request) {
         }
         const userId = session.user.id;
 
-        const { companyId, name, description, role_in_company } = await request.json();
+        const { companyId, name, description } = await request.json();
 
-        if (!companyId || !name || !description || !role_in_company) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!companyId) {
+            return NextResponse.json({ error: 'Missing companyId' }, { status: 400 });
+        }
+        if (!name && !description) {
+            return NextResponse.json({ error: 'Нет данных для обновления' }, { status: 400 });
         }
 
         const member = await query<CompanyMember>(
@@ -159,11 +162,17 @@ export async function PUT(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
-        const result = await query<Company>(
-            `UPDATE companies SET name = $1, description = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
-            [name, description, companyId]
-        );
+        // Формируем динамический запрос
+        const fields = [];
+        const values = [];
+        let idx = 1;
+        if (name) { fields.push(`name = $${idx++}`); values.push(name); }
+        if (description) { fields.push(`description = $${idx++}`); values.push(description); }
+        fields.push(`updated_at = NOW()`);
+        values.push(companyId);
 
+        const sql = `UPDATE companies SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
+        const result = await query<Company>(sql, values);
         const company = result[0];
 
         return NextResponse.json({ 

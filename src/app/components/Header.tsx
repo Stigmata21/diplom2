@@ -9,6 +9,7 @@ import { signIn, signOut, useSession } from 'next-auth/react';
 import { ThemeSwitcher } from '../../components/ui/ThemeSwitcher';
 import { useRouter } from 'next/navigation';
 import ProfileModal from './ProfileModal';
+import InvitesModal from './InvitesModal';
 
 interface User {
     id: number;
@@ -41,6 +42,8 @@ export default function Header() {
     const [companies, setCompanies] = useState<Company[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isInvitesOpen, setIsInvitesOpen] = useState(false);
+    const [invitesCount, setInvitesCount] = useState(0);
 
     useEffect(() => {
         if (user) {
@@ -57,6 +60,16 @@ export default function Header() {
             setSelectedCompany(null);
         }
     }, [user]);
+
+    useEffect(() => {
+        if (!user) return;
+        fetch('/api/me/invites', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+                setInvitesCount((data.invites || []).filter((i: any) => i.status === 'pending').length);
+            })
+            .catch(() => setInvitesCount(0));
+    }, [user, isInvitesOpen]);
 
     const scrollToSection = (sectionId: string) => {
         return () => {
@@ -95,12 +108,21 @@ export default function Header() {
                 setLoading(false);
                 return;
             }
+            const regRes = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+            const regData = await regRes.json();
+            if (!regRes.ok) {
+                setError(regData.error || 'Ошибка регистрации');
+                setLoading(false);
+                return;
+            }
             const res = await signIn('credentials', {
-                username,
                 email,
                 password,
                 redirect: false,
-                isRegister: true,
                 rememberMe,
             });
             if (res?.error) {
@@ -178,7 +200,7 @@ export default function Header() {
                     <p className="text-sm text-gray-600">{user?.email}</p>
                 </div>
             </div>
-            <div className="border-t pt-2">
+            <div className="border-t pt-2 flex flex-col gap-1">
                 <button
                     onClick={() => setIsProfileModalOpen(true)}
                     className="block w-full text-left py-2 px-3 hover:bg-gray-100 rounded-md"
@@ -193,9 +215,16 @@ export default function Header() {
                 <Link href="/companies" className="block w-full text-left py-2 px-3 hover:bg-gray-100 rounded-md">
                     Мои компании
                 </Link>
-                <Link href="/support" className="block w-full text-left py-2 px-3 hover:bg-gray-100 rounded-md">
-                    Поддержка
-                </Link>
+                <div className="flex-1" />
+                <button
+                    onClick={() => { setIsInvitesOpen(true); setIsProfileOpen(false); }}
+                    className="block w-full text-left py-2 px-3 hover:bg-gray-100 rounded-md flex items-center gap-2"
+                >
+                    Приглашения
+                    {invitesCount > 0 && (
+                        <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-400 text-gray-900">{invitesCount}</span>
+                    )}
+                </button>
                 <NavButton
                     onClick={handleLogout}
                     className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white"
@@ -392,6 +421,7 @@ export default function Header() {
                 )}
             </div>
             <ProfileModal open={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+            <InvitesModal open={isInvitesOpen} onClose={() => setIsInvitesOpen(false)} />
         </header>
     );
 }

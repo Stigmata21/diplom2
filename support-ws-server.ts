@@ -28,7 +28,6 @@ wss.on('connection', (ws: any, req: http.IncomingMessage, userId: string, isMode
   ws.on('message', async (msg: Buffer) => {
     try {
       const data = JSON.parse(msg.toString());
-      console.log('[WS][INCOMING]', { userId, isModerator, data });
       if (data.type === 'message') {
         const text = data.text?.trim();
         if (!text) return;
@@ -38,7 +37,6 @@ wss.on('connection', (ws: any, req: http.IncomingMessage, userId: string, isMode
           await dbQuery('INSERT INTO support_chat (user_id, moderator_id, message, from_moderator) VALUES ($1, $2, $3, TRUE)', [data.to, userId, text]);
           const target = clients.get(data.to);
           const payload = { from: 'moderator', text, moderatorId: userId, userId: data.to, created_at: new Date().toISOString() };
-          console.log('[WS][SEND][mod->user]', payload);
           if (target) target.send(JSON.stringify(payload));
         } else {
           // user -> moderator
@@ -46,13 +44,12 @@ wss.on('connection', (ws: any, req: http.IncomingMessage, userId: string, isMode
           if (activeSupportModeratorId) {
             const modWs = clients.get(activeSupportModeratorId + '_mod');
             const payload = { from: 'user', text, userId, moderatorId: activeSupportModeratorId, created_at: new Date().toISOString() };
-            console.log('[WS][SEND][user->mod]', payload);
             if (modWs) modWs.send(JSON.stringify(payload));
           }
         }
       }
     } catch (err) {
-      console.error('[WS][ERROR]', err);
+      // No console.error here
     }
   });
 
@@ -73,9 +70,7 @@ server.on('upgrade', (req, socket, head) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log('Support WebSocket server running on port', PORT);
-});
+server.listen(PORT);
 
 // Автоудаление старых сообщений (раз в час)
 setInterval(async () => {
