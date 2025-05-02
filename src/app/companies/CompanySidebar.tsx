@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import EmployeesTab from "./EmployeesTab";
 import TasksTab from "./TasksTab";
 import NotesTab from "./NotesTab";
@@ -59,6 +59,40 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
   const [logsLoading, setLogsLoading] = useState(false);
   const [invites, setInvites] = useState<CompanyInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState(false);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [showLeft, setShowLeft] = useState(false);
+  const [showRight, setShowRight] = useState(false);
+
+  // Проверка, нужно ли показывать стрелки и fade
+  function checkTabsScroll() {
+    const el = tabsRef.current;
+    if (!el) return;
+    setShowLeft(el.scrollLeft > 0);
+    setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }
+  useEffect(() => { checkTabsScroll(); }, [activeTab]);
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    // Скроллим к активному табу
+    const active = el.querySelector('.tab-active');
+    if (active && active instanceof HTMLElement) {
+      active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+    checkTabsScroll();
+    el.addEventListener('scroll', checkTabsScroll);
+    window.addEventListener('resize', checkTabsScroll);
+    return () => {
+      el.removeEventListener('scroll', checkTabsScroll);
+      window.removeEventListener('resize', checkTabsScroll);
+    };
+  }, [activeTab]);
+
+  function scrollTabs(dir: 'left' | 'right') {
+    const el = tabsRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === 'left' ? -120 : 120, behavior: 'smooth' });
+  }
 
   useEffect(() => {
     async function fetchLogs() {
@@ -94,6 +128,17 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
     }
     fetchInvites();
   }, [company?.id]);
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
 
   if (!open || !company) return null;
 
@@ -192,16 +237,28 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
           <button onClick={onClose} className="text-gray-500 hover:text-gray-900 dark:hover:text-white text-2xl font-bold min-w-[40px] min-h-[40px] flex items-center justify-center">×</button>
         </div>
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 text-base gap-1 px-2 py-2 overflow-x-auto">
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              className={`flex-1 min-w-[120px] px-4 py-3 rounded-lg font-semibold transition-colors duration-200 whitespace-nowrap ${activeTab === tab.key ? 'text-indigo-700 bg-white dark:bg-gray-900 shadow border border-indigo-200 dark:border-gray-700' : 'text-gray-500 hover:text-indigo-700 bg-transparent'}`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="relative">
+          {/* Fade-эффект справа */}
+          {showRight && <div className="pointer-events-none absolute right-0 top-0 h-full w-8 z-10 bg-gradient-to-l from-white dark:from-gray-900 to-transparent" />}
+          {showLeft && <div className="pointer-events-none absolute left-0 top-0 h-full w-8 z-10 bg-gradient-to-r from-white dark:from-gray-900 to-transparent" />}
+          {/* Стрелки */}
+          {showLeft && <button className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/80 dark:bg-gray-900/80 rounded-full p-1 shadow border border-gray-200 dark:border-gray-700" onClick={() => scrollTabs('left')}><svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>}
+          {showRight && <button className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/80 dark:bg-gray-900/80 rounded-full p-1 shadow border border-gray-200 dark:border-gray-700" onClick={() => scrollTabs('right')}><svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>}
+          <div
+            ref={tabsRef}
+            className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 text-base gap-1 px-2 py-2 overflow-x-auto no-scrollbar relative"
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            {TABS.map(tab => (
+              <button
+                key={tab.key}
+                className={`flex-1 min-w-[120px] px-4 py-3 rounded-lg font-semibold transition-colors duration-200 whitespace-nowrap ${activeTab === tab.key ? 'text-indigo-700 bg-white dark:bg-gray-900 shadow border border-indigo-200 dark:border-gray-700 tab-active' : 'text-gray-500 hover:text-indigo-700 bg-transparent'}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto p-2 sm:p-4 relative">

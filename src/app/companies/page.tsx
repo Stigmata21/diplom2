@@ -160,7 +160,10 @@ export default function CompaniesPage() {
       const res = await fetch(`/api/companies?companyId=${company.id}`, { method: 'DELETE', credentials: 'include' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка удаления');
-      if (selectedCompany?.id === company.id) setSidebarOpen(false);
+      if (selectedCompany?.id === company.id) {
+        setSelectedCompany(null);
+        setSidebarOpen(false);
+      }
       fetchCompanies();
     } catch (e) {
       alert(e instanceof Error ? e.message : e);
