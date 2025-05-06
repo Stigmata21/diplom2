@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 
 // PUT /api/companies/[companyId]/employees/[employeeId]
-export async function PUT(req: NextRequest, { params }: { params: { companyId: string, employeeId: string } }) {
-  const { companyId, employeeId } = await params;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function PUT(req: NextRequest, context: any) {
+  const params = await context.params;
+  const { companyId, employeeId } = params;
   const { name, email, role, salary, note } = await req.json();
   if (!companyId || !employeeId) return NextResponse.json({ error: 'companyId, employeeId обязательны' }, { status: 400 });
   try {
@@ -19,14 +21,16 @@ export async function PUT(req: NextRequest, { params }: { params: { companyId: s
       await query('INSERT INTO company_logs (company_id, user_id, action, meta) VALUES ($1, $2, $3, $4)', [companyId, session.user.id, 'update_employee', JSON.stringify({ employeeId, name, email, role, salary, note })]);
     }
     return NextResponse.json({ ok: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка обновления сотрудника' }, { status: 500 });
   }
 }
 
 // DELETE /api/companies/[companyId]/employees/[employeeId]
-export async function DELETE(req: NextRequest, { params }: { params: { companyId: string, employeeId: string } }) {
-  const { companyId, employeeId } = await params;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function DELETE(req: NextRequest, context: any) {
+  const params = await context.params;
+  const { companyId, employeeId } = params;
   if (!companyId || !employeeId) return NextResponse.json({ error: 'companyId, employeeId обязательны' }, { status: 400 });
   try {
     await query('DELETE FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, employeeId]);
@@ -36,7 +40,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { companyId
       await query('INSERT INTO company_logs (company_id, user_id, action, meta) VALUES ($1, $2, $3, $4)', [companyId, session.user.id, 'remove_employee', JSON.stringify({ employeeId })]);
     }
     return NextResponse.json({ ok: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка удаления сотрудника' }, { status: 500 });
   }
 } 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { query } from '../../../../../lib/db';
 
 export async function POST(req: NextRequest) {
@@ -15,13 +15,13 @@ export async function POST(req: NextRequest) {
     }
     // Проверяем, что отправитель — админ или владелец
     const perms = await query('SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, session.user.id]);
-    if (!perms[0] || (perms[0] as any).role_in_company !== 'owner' && (perms[0] as any).role_in_company !== 'admin') {
+    if (!perms[0] || (perms[0] as { role_in_company: string }).role_in_company !== 'owner' && (perms[0] as { role_in_company: string }).role_in_company !== 'admin') {
       return NextResponse.json({ error: 'Нет прав на приглашение' }, { status: 403 });
     }
     // Проверяем, не состоит ли email уже в компании
     const user = await query('SELECT id FROM users WHERE email = $1', [email]);
     if (user[0]) {
-      const inCompany = await query('SELECT 1 FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, (user[0] as any).id]);
+      const inCompany = await query('SELECT 1 FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, (user[0] as { id: string }).id]);
       if (inCompany[0]) {
         return NextResponse.json({ error: 'Пользователь уже в компании' }, { status: 409 });
       }
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     // Создаём инвайт
     await query('INSERT INTO company_invites (company_id, email, role, status, invited_by) VALUES ($1, $2, $3, $4, $5)', [companyId, email, role, 'pending', session.user.id]);
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка приглашения' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка приглашения' }, { status: 500 });
   }
 } 

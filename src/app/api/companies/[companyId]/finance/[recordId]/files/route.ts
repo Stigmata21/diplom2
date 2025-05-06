@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs/promises';
 
 // POST /api/companies/[companyId]/finance/[recordId]/files
-export async function POST(req: NextRequest, context: { params: { companyId: string, recordId: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function POST(req: NextRequest, context: any) {
   const params = await context.params;
   const { companyId, recordId } = params;
   const recordIdNum = Number(recordId);
@@ -48,14 +49,16 @@ export async function POST(req: NextRequest, context: { params: { companyId: str
       return NextResponse.json({ error: 'Файл не был добавлен в базу (inserted пустой)' }, { status: 500 });
     }
     return NextResponse.json({ file: inserted[0] }, { status: 201 });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const error = e as { message?: string };
     console.error('Ошибка вставки файла в finance_files:', e);
-    return NextResponse.json({ error: e.message || 'Ошибка загрузки файла' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Ошибка загрузки файла' }, { status: 500 });
   }
 }
 
 // GET /api/companies/[companyId]/finance/[recordId]/files
-export async function GET(req: NextRequest, context: { params: { companyId: string, recordId: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function GET(req: NextRequest, context: any) {
   const params = await context.params;
   const { recordId } = params;
   const recordIdNum = Number(recordId);
@@ -65,7 +68,7 @@ export async function GET(req: NextRequest, context: { params: { companyId: stri
       [recordIdNum]
     );
     return NextResponse.json({ files }, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка получения файлов' }, { status: 500 });
   }
 } 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 interface Employee {
   id: string;
@@ -25,7 +25,7 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
   const [error, setError] = useState('');
 
   // Получаем id текущего пользователя (пример: window.__userId, заменить на актуальный способ)
-  const userId = (typeof window !== 'undefined' && (window as any).__userId) || '';
+  const userId = (typeof window !== 'undefined' && (window as unknown as { __userId?: string }).__userId) || '';
   const currentUser = employees.find(e => e.id === userId);
   const userRole = currentUser?.role || 'member';
 
@@ -35,23 +35,25 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
       const res = await fetch(`/api/companies/${companyId}/employees`, { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки сотрудников');
-      setEmployees((data.employees || []).map((e: any) => ({
-        id: e.id,
-        name: e.name,
-        email: e.email,
-        role: e.role,
-        salary: e.salary || 0,
-        note: e.note || '',
+      setEmployees((data.employees || []).map((e: unknown) => ({
+        id: (e as Employee).id,
+        name: (e as Employee).name,
+        email: (e as Employee).email,
+        role: (e as Employee).role,
+        salary: (e as Employee).salary || 0,
+        note: (e as Employee).note || '',
       })));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка');
       setEmployees([]);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { if (companyId) fetchEmployees(); }, [companyId]);
+  const fetchEmployeesCallback = useCallback(fetchEmployees, [companyId]);
+
+  useEffect(() => { if (companyId) fetchEmployeesCallback(); }, [companyId, fetchEmployeesCallback]);
 
   const filtered = employees.filter(e =>
     (e.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -70,8 +72,8 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
       setDeleteEmployee(null);
       fetchEmployees();
       if (onEmployeesChange) onEmployeesChange();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Ошибка');
     }
   };
 
@@ -122,7 +124,6 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
       )}
       {showModal && (
         <EmployeeModal
-          open={showModal}
           onClose={() => setShowModal(false)}
           onSave={async emp => {
             try {
@@ -156,8 +157,8 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
               setShowModal(false);
               fetchEmployees();
               if (onEmployeesChange) onEmployeesChange();
-            } catch (err: any) {
-              alert(err.message);
+            } catch (err: unknown) {
+              alert(err instanceof Error ? err.message : 'Ошибка');
             }
           }}
           initial={editEmployee}
@@ -180,8 +181,7 @@ export default function EmployeesTab({ companyId, canEdit, onEmployeesChange }: 
   );
 }
 
-function EmployeeModal({ open, onClose, onSave, initial, isOwner }: {
-  open: boolean;
+function EmployeeModal({ onClose, onSave, initial, isOwner }: {
   onClose: () => void;
   onSave: (emp: Employee) => void;
   initial: Employee | null;

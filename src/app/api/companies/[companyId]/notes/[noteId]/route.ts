@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 
 // PUT /api/companies/[companyId]/notes/[noteId]
-export async function PUT(req: NextRequest, { params }: { params: { companyId: string, noteId: string } }) {
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ companyId: string, noteId: string }> }
+) {
   const { companyId, noteId } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
@@ -28,13 +31,16 @@ export async function PUT(req: NextRequest, { params }: { params: { companyId: s
       [title, content, noteId, companyId]
     );
     return NextResponse.json({ ok: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка обновления заметки' }, { status: 500 });
   }
 }
 
 // DELETE /api/companies/[companyId]/notes/[noteId]
-export async function DELETE(req: NextRequest, { params }: { params: { companyId: string, noteId: string } }) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ companyId: string, noteId: string }> }
+) {
   const { companyId, noteId } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
@@ -57,7 +63,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { companyId
       [noteId, companyId]
     );
     return NextResponse.json({ ok: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка удаления заметки' }, { status: 500 });
   }
 } 

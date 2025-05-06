@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, logAdminAction } from '@/lib/db';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * pageSize;
 
     let where = '';
-    let params: any[] = [];
+    const params: (string | number)[] = [];
     if (search) {
       where = 'WHERE c.name ILIKE $1';
       params.push(`%${search}%`);
@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
     const total = parseInt(totalRes[0]?.count || '0', 10);
 
     return NextResponse.json({ companies, total });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 }
 
@@ -54,8 +54,8 @@ export async function DELETE(req: NextRequest) {
     await logAdminAction(session?.user?.id || null, 'delete_company', { companyId: id });
 
     return NextResponse.json({ message: 'Компания удалена' });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 }
 
@@ -64,11 +64,11 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     const { name, description } = await req.json();
     if (!name) return NextResponse.json({ error: 'Название обязательно' }, { status: 400 });
-    const res = await query('INSERT INTO companies (name, description) VALUES ($1, $2) RETURNING id', [name, description || '']) as any[];
-    await logAdminAction(session?.user?.id || null, 'create_company', { companyId: res[0].id, name });
-    return NextResponse.json({ id: res[0].id });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+    const res = await query<{ id: number }>('INSERT INTO companies (name, description) VALUES ($1, $2) RETURNING id', [name, description || '']);
+    await logAdminAction(session?.user?.id || null, 'create_company', { companyId: res[0]?.id, name });
+    return NextResponse.json({ id: res[0]?.id });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 }
 
@@ -80,7 +80,7 @@ export async function PUT(req: NextRequest) {
     await query('UPDATE companies SET name = $1, description = $2 WHERE id = $3', [name, description || '', id]);
     await logAdminAction(session?.user?.id || null, 'edit_company', { companyId: id, name });
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 } 

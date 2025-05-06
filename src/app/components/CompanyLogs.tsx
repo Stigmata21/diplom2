@@ -26,8 +26,8 @@ export default function CompanyLogs({ companyId }: { companyId: number }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки истории');
       setLogs(data.logs);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
     } finally {
       setLoading(false);
     }

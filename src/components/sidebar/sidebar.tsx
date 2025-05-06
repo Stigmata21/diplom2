@@ -3,10 +3,11 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeSwitcher } from "../ui/ThemeSwitcher";
+import Image from 'next/image';
 
 const menu = [
   { href: "/companies", label: "Компании", icon: "🏢" },
-  { href: "/companies/files", label: "Файлы компании", icon: "📁" },
+  { href: "/companies/files", label: "Финансы компании", icon: "💰" },
 ];
 
 export function Sidebar() {
@@ -39,7 +40,7 @@ export function Sidebar() {
         style={{ minHeight: '100vh', backdropFilter: 'blur(8px)' }}
       >
         <div className="text-2xl font-bold text-indigo-700 mb-8 text-gray-800 dark:text-white flex items-center gap-2">
-          <img src="/logo.png" alt="logo" className="h-10 w-10" />
+          <Image src="/logo.webp" alt="logo" width={40} height={40} className="h-10 w-10" loading="lazy" />
           CompanySync
         </div>
         <nav className="flex flex-col space-y-2">

@@ -50,8 +50,8 @@ export default function CompanyEmployees({ companyId, currentUserId, currentUser
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки сотрудников');
       setEmployees(data.employees);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
     } finally {
       setLoading(false);
     }
@@ -69,8 +69,8 @@ export default function CompanyEmployees({ companyId, currentUserId, currentUser
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка смены роли');
       setEmployees(employees.map(e => e.id === userId ? { ...e, role_in_company: newRole } : e));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
     } finally {
       setSaving(null);
     }
@@ -90,8 +90,8 @@ export default function CompanyEmployees({ companyId, currentUserId, currentUser
       if (!res.ok) throw new Error(data.error || 'Ошибка добавления сотрудника');
       setEmployees([...employees, data.employee]);
       setInviteEmail('');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
     } finally {
       setInviteLoading(false);
     }
@@ -110,8 +110,8 @@ export default function CompanyEmployees({ companyId, currentUserId, currentUser
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка удаления сотрудника');
       setEmployees(employees.filter(e => e.id !== userId));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
     } finally {
       setSaving(null);
     }

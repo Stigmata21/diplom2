@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       [username, email, password_hash, 'user', true]
     );
     return NextResponse.json({ user: user[0] }, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка регистрации' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка регистрации' }, { status: 500 });
   }
 } 

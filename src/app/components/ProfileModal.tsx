@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 
 interface ProfileModalProps {
   open: boolean;
@@ -53,8 +54,8 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
         setAvatar(avatarUrl);
         setAvatarPreview(avatarUrl);
         if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
-          if (typeof (session as any)?.update === 'function') {
-            (session as any).update({
+          if (typeof (session as unknown as { update?: (data: unknown) => void })?.update === 'function') {
+            (session as unknown as { update: (data: unknown) => void }).update({
               email: data.user.email,
               name: data.user.username,
               image: avatarUrl,
@@ -64,8 +65,8 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
           setTimeout(() => window.location.reload(), 300);
         }
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка обновления профиля');
     } finally {
       setLoading(false);
     }
@@ -94,8 +95,8 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
       setNewPassword('');
       setConfirmPassword('');
       setShowPasswordChange(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка смены пароля');
     } finally {
       setLoading(false);
     }
@@ -133,10 +134,13 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
               onClick={() => fileInputRef.current?.click()}
               title="Кликните для смены аватара"
             >
-              <img
-                src={avatarPreview || 'https://via.placeholder.com/80'}
+              <Image
+                src={avatarPreview || avatar || '/avatar-placeholder.webp'}
                 alt="Аватар"
+                width={80}
+                height={80}
                 className="w-20 h-20 rounded-full object-cover"
+                loading="lazy"
               />
               <input
                 type="file"

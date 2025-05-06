@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 interface AdminUser { id: string; name: string; }
 
@@ -112,7 +113,7 @@ export default function AdminSettings() {
           <div>
             <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Аватар поддержки</label>
             <div className="flex items-center gap-4">
-              <img src={supportAvatarUrl} alt="Аватар поддержки" className="w-14 h-14 rounded-full border-2 border-indigo-500" />
+              <Image src={supportAvatarUrl} alt="Аватар поддержки" width={56} height={56} className="w-14 h-14 rounded-full border-2 border-indigo-500" loading="lazy" />
               <input type="file" accept="image/*" onChange={handleAvatarUpload} disabled={saving} className="text-gray-700 dark:text-gray-300" />
             </div>
             <input

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 interface Note {
   id: string;
@@ -18,22 +18,22 @@ export default function NotesTab({ companyId, userId }: { companyId: string, use
   const [editNote, setEditNote] = useState<Note | null>(null);
   const [deleteNote, setDeleteNote] = useState<Note | null>(null);
 
-  async function fetchNotes() {
+  const fetchNotes = useCallback(async () => {
     setLoading(true); setError("");
     try {
       const res = await fetch(`/api/companies/${companyId}/notes`, { credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Ошибка загрузки заметок");
       setNotes(data.notes || []);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Неизвестная ошибка");
       setNotes([]);
     } finally {
       setLoading(false);
     }
-  }
+  }, [companyId]);
 
-  useEffect(() => { if (companyId) fetchNotes(); }, [companyId]);
+  useEffect(() => { if (companyId) fetchNotes(); }, [companyId, fetchNotes]);
 
   async function handleDelete() {
     if (!deleteNote) return;
@@ -48,8 +48,8 @@ export default function NotesTab({ companyId, userId }: { companyId: string, use
       if (!res.ok) throw new Error(data.error || "Ошибка удаления заметки");
       setDeleteNote(null);
       fetchNotes();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Неизвестная ошибка");
     }
   }
 
@@ -96,7 +96,6 @@ export default function NotesTab({ companyId, userId }: { companyId: string, use
       )}
       {showModal && (
         <NoteModal
-          open={showModal}
           onClose={() => setShowModal(false)}
           onSave={async (note) => {
             try {
@@ -128,8 +127,8 @@ export default function NotesTab({ companyId, userId }: { companyId: string, use
               }
               setShowModal(false);
               fetchNotes();
-            } catch (err: any) {
-              alert(err.message);
+            } catch (err: unknown) {
+              alert(err instanceof Error ? err.message : "Неизвестная ошибка");
             }
           }}
           initial={editNote}
@@ -151,8 +150,7 @@ export default function NotesTab({ companyId, userId }: { companyId: string, use
   );
 }
 
-function NoteModal({ open, onClose, onSave, initial }: {
-  open: boolean;
+function NoteModal({ onClose, onSave, initial }: {
   onClose: () => void;
   onSave: (note: { title: string; content: string }) => void;
   initial?: Note | null;

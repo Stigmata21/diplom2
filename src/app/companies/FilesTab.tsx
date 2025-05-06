@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
 
@@ -7,6 +7,7 @@ interface FileItem {
   id: string;
   name: string;
   url: string;
+  path: string;
   description: string;
   uploadedBy: string;
   createdAt: string;
@@ -16,7 +17,7 @@ interface FileItem {
 export default function CompanyFilesTab({ companyId }: { companyId: string }) {
   const { data: session } = useSession();
   const userId = session?.user?.id;
-  const userRole = session?.user?.role || '';
+  const userRole: string = session?.user?.role || '';
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,7 +28,7 @@ export default function CompanyFilesTab({ companyId }: { companyId: string }) {
   const [editDesc, setEditDesc] = useState('');
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
 
-  async function fetchFiles() {
+  const fetchFiles = useCallback(async () => {
     if (!companyId) { setError('companyId не найден'); setFiles([]); setLoading(false); return; }
     setLoading(true); setError('');
     try {
@@ -35,15 +36,15 @@ export default function CompanyFilesTab({ companyId }: { companyId: string }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки файлов');
       setFiles(data.files || []);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Ошибка');
       setFiles([]);
     } finally {
       setLoading(false);
     }
-  }
+  }, [companyId]);
 
-  useEffect(() => { fetchFiles(); }, [companyId]);
+  useEffect(() => { if (companyId) fetchFiles(); }, [companyId, fetchFiles]);
 
   async function handleUpload() {
     if (!file || !companyId) return;
@@ -59,9 +60,9 @@ export default function CompanyFilesTab({ companyId }: { companyId: string }) {
       setFile(null); setDesc('');
       fetchFiles();
       toast.success('Файл успешно загружен');
-    } catch (e: any) {
-      setError(e.message);
-      toast.error(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Ошибка');
+      toast.error(e instanceof Error ? e.message : 'Ошибка');
     } finally {
       setUploading(false);
     }

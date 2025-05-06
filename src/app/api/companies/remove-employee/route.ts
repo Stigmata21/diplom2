@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../../lib/db';
 
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Логируем удаление сотрудника
     await query('INSERT INTO company_logs (company_id, user_id, action, meta) VALUES ($1, $2, $3, $4)', [companyId, currentUserId, 'remove_employee', JSON.stringify({ removedUserId: userId })]);
     return NextResponse.json({ message: 'Сотрудник удалён' }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 } 

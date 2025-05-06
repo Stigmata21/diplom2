@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, logAdminAction } from '../../../../../lib/db';
+import { query, logAdminAction } from '@/lib/db';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

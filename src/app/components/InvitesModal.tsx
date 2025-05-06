@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { CompanyInvite } from '../companies/types';
 
 interface Invite {
   id: string;
@@ -51,8 +50,8 @@ export default function InvitesModal({ open, onClose }: InvitesModalProps) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка');
       setInvites(invites => invites.map(i => i.id === inviteId ? { ...i, status: action === 'accept' ? 'accepted' : 'declined' } : i));
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Неизвестная ошибка');
     } finally {
       setActionLoading(null);
     }

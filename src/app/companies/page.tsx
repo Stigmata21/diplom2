@@ -30,8 +30,8 @@ function CompanyCreateModal({ open, onClose, onCreate }: { open: boolean, onClos
             if (!res.ok) throw new Error(data.error || "Ошибка создания");
             onCreate(data.company || { id: data.id, name, description });
             setName(""); setDescription("");
-          } catch (err: any) {
-            setError(err.message);
+          } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Ошибка создания');
           } finally {
             setLoading(false);
           }
@@ -122,7 +122,16 @@ export default function CompaniesPage() {
 
   useEffect(() => { fetchCompanies(); }, []);
 
+  useEffect(() => {
+    if (selectedCompany && !companies.find(c => c.id === selectedCompany.id)) {
+      setSelectedCompany(null);
+      setSidebarOpen(false);
+    }
+  }, [companies, selectedCompany]);
+
   const filteredCompanies = companies.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  console.log('companies:', companies);
+  console.log('filteredCompanies:', filteredCompanies);
 
   // Быстрое действие: выйти из компании
   async function handleLeave(company: Company) {
@@ -146,27 +155,10 @@ export default function CompaniesPage() {
       if (selectedCompany?.id === leaveCompany.id) setSidebarOpen(false);
       fetchCompanies();
       setLeaveCompany(null);
-    } catch (e: any) {
-      setLeaveError(e.message);
+    } catch (e: unknown) {
+      setLeaveError(e instanceof Error ? e.message : 'Ошибка выхода');
     } finally {
       setLeaveLoading(false);
-    }
-  }
-
-  // Быстрое действие: удалить компанию
-  async function handleDelete(company: Company) {
-    if (!confirm(`Удалить компанию «${company.name}»? Это действие необратимо!`)) return;
-    try {
-      const res = await fetch(`/api/companies?companyId=${company.id}`, { method: 'DELETE', credentials: 'include' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Ошибка удаления');
-      if (selectedCompany?.id === company.id) {
-        setSelectedCompany(null);
-        setSidebarOpen(false);
-      }
-      fetchCompanies();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : e);
     }
   }
 
@@ -219,9 +211,9 @@ export default function CompaniesPage() {
               <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg mt-2" onClick={() => setShowCreate(true)}>Создать первую компанию</button>
             </div>
           ) : (
-            <ul className="grid grid-cols-1 gap-4">
+            <ul key={companies.map(c => c.id).join(',')} className="grid grid-cols-1 gap-4">
               {filteredCompanies.map((company) => (
-                <li key={company.id}>
+                <li key={String(company.id)}>
                   <div
                     className={`w-full flex flex-col items-center px-4 py-4 rounded-xl transition shadow-md border border-indigo-100 dark:border-gray-800 bg-white dark:bg-gray-950 hover:bg-indigo-50 dark:hover:bg-indigo-900 focus:ring-2 focus:ring-indigo-300 focus:outline-none ${selectedCompany?.id === company.id ? "bg-indigo-100 border-indigo-400 dark:bg-indigo-900" : ""}`}
                     tabIndex={0}

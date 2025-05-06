@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import Image from 'next/image';
 
 interface Message {
   from: "user" | "moderator";
@@ -28,7 +29,6 @@ export default function SupportModeratorPanel() {
   const [unread, setUnread] = useState<{ [userId: string]: number }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [error, setError] = useState('');
 
   // Получаем supportAvatarUrl из settings
   useEffect(() => {
@@ -77,13 +77,10 @@ export default function SupportModeratorPanel() {
   const fetchMessages = async () => {
     if (!selectedUser) return;
     setLoading(true);
-    setError('');
     try {
       const res = await fetch(`/api/admin/support/chat?userId=${selectedUser.id}`);
       const data = await res.json();
       setMessages(data.messages || []);
-    } catch (e) {
-      if (e instanceof Error) setError(e.message);
     } finally {
       setLoading(false);
     }
@@ -117,20 +114,6 @@ export default function SupportModeratorPanel() {
     return msg.from === "moderator" && (String(msg.moderatorId) === String(session?.user?.id) || msg.moderatorId === '1');
   }
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/admin/support/users');
-      const data = await res.json();
-      setUsers(data.users || []);
-    } catch (e) {
-      if (e instanceof Error) setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="flex h-[80vh] bg-white dark:bg-gray-900 rounded-xl shadow overflow-hidden animate-[fadeInUp_0.3s]">
       <audio ref={audioRef} src="/support-notify.mp3" preload="auto" />
@@ -157,7 +140,7 @@ export default function SupportModeratorPanel() {
         <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800">
           {selectedUser ? (
             <>
-              <img src={supportAvatarUrl} alt="Модератор" className="w-10 h-10 rounded-full border-2 border-indigo-500" />
+              <Image src={supportAvatarUrl} alt="Модератор" width={40} height={40} className="w-10 h-10 rounded-full border-2 border-indigo-500" loading="lazy" />
               <div className="font-bold text-indigo-700 dark:text-white">{selectedUser.name}</div>
             </>
           ) : <div className="text-gray-400">Выберите пользователя</div>}
@@ -173,7 +156,7 @@ export default function SupportModeratorPanel() {
                         {selectedUser?.name?.[0] || "?"}
                       </div>
                     ) : (
-                      <img src={supportAvatarUrl} alt="Модератор" className="w-8 h-8 rounded-full border-2 border-indigo-500 ml-2" />
+                      <Image src={supportAvatarUrl} alt="Модератор" width={32} height={32} className="w-8 h-8 rounded-full border-2 border-indigo-500 ml-2" loading="lazy" />
                     )}
                     <div className={`px-3 py-2 rounded-2xl max-w-[70%] text-sm ${isOwnMessage(msg) ? "bg-indigo-600 text-white" : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-indigo-100 dark:border-gray-800"}`}>
                       {msg.text || msg.message}

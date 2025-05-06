@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 
 interface Company {
   id: number;
@@ -8,14 +8,6 @@ interface Company {
   users: number;
   created: string;
   description?: string;
-}
-
-interface Log {
-  id: number;
-  action: string;
-  meta: Record<string, unknown>;
-  created_at: string;
-  username: string;
 }
 
 const PAGE_SIZE = 10;
@@ -31,11 +23,8 @@ export default function AdminCompanies() {
   const [editCompany, setEditCompany] = useState<Company | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [logs, setLogs] = useState<Log[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
 
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -49,9 +38,9 @@ export default function AdminCompanies() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, page]);
 
-  useEffect(() => { fetchCompanies(); }, [search, page]);
+  useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
 
   const handleDelete = async (id: number) => {
     if (!confirm('Удалить компанию?')) return;
@@ -92,19 +81,6 @@ export default function AdminCompanies() {
       setModalLoading(false);
     }
   };
-
-  async function fetchLogs(companyId: number) {
-    setLogsLoading(true);
-    try {
-      const res = await fetch(`/api/companies/logs?companyId=${companyId}`);
-      const data = await res.json();
-      setLogs(data.logs || []);
-    } catch {
-      setLogs([]);
-    } finally {
-      setLogsLoading(false);
-    }
-  }
 
   return (
     <div>

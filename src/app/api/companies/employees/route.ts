@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'companyId обязателен' }, { status: 400 });
   }
   try {
-    const employees = await query<any>(
+    const employees = await query<unknown>(
       `SELECT u.id, u.username, u.email, cu.role_in_company
        FROM company_users cu
        JOIN users u ON cu.user_id = u.id
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       [companyId]
     );
     return NextResponse.json({ employees }, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка получения сотрудников' }, { status: 500 });
   }
 } 

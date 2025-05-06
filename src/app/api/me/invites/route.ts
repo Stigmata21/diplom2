@@ -1,15 +1,15 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../../lib/db';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const email = session.user.email;
-  const invites = await query<any>(
+  const invites = await query<{ id: number; company_id: number; role: string; status: string }>(
     `SELECT i.id, i.company_id, c.name as company_name, i.email, i.role, i.status, i.invited_by, i.created_at
      FROM company_invites i
      JOIN companies c ON i.company_id = c.id
@@ -20,18 +20,18 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ invites });
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const email = session.user.email;
-  const { inviteId, action } = await req.json();
+  const { inviteId, action } = await request.json();
   if (!inviteId || !['accept','decline'].includes(action)) {
     return NextResponse.json({ error: 'Invalid params' }, { status: 400 });
   }
   // Проверяем, что инвайт действительно на этого пользователя
-  const invites = await query<any>(
+  const invites = await query<{ id: number; company_id: number; role: string; status: string }>(
     'SELECT * FROM company_invites WHERE id = $1 AND email = $2',
     [inviteId, email]
   );

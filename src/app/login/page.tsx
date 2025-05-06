@@ -28,7 +28,7 @@ export default function Login() {
             } else {
                 router.refresh();
             }
-        } catch (err) {
+        } catch {
             setError('Ошибка при входе');
         } finally {
             setLoading(false);

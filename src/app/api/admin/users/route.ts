@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * pageSize;
 
   let where = '';
-  let params: QueryParam[] = [];
+  const params: QueryParam[] = [];
   if (search) {
     where = 'WHERE username ILIKE $1 OR email ILIKE $1';
     params.push(`%${search}%`);

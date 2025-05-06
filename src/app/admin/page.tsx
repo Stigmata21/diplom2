@@ -1,21 +1,12 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  role: string;
-  is_active: boolean;
-}
-
-interface Metrics {
-  users: number;
-  companies: number;
-  logs: number;
-  activity: { day: string; count: number }[];
-  [key: string]: any; // fallback для других ключей, если появятся
-}
+type Metrics = {
+  users?: number;
+  companies?: number;
+  logs?: number;
+  activity?: { day: string; count: number }[];
+} & Record<string, unknown>;
 
 export default function AdminDashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -34,27 +25,16 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  const fetchUsers = async () => {
-    setLoading(true); setError('');
-    try {
-      const res = await fetch('/api/admin/users');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
-    } catch (e) {
-      if (e instanceof Error) setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-indigo-700 mb-6">Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[{label:'Пользователей', key:'users'},{label:'Компаний',key:'companies'},{label:'Запросов',key:'logs'}].map((m,i) => (
+        {[{label:'Пользователей', key:'users'},{label:'Компаний',key:'companies'},{label:'Запросов',key:'logs'}].map((m) => (
           <div key={m.key} className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
             <div className="text-4xl font-bold text-indigo-600">
-              {loading ? <span className="animate-pulse text-gray-300">...</span> : metrics?.[m.key] ?? '-'}
+              {loading ? <span className="animate-pulse text-gray-300">...</span> : (
+                metrics?.[m.key] !== undefined ? String(metrics[m.key]) : '-'
+              )}
             </div>
             <div className="text-gray-500 mt-2">{m.label}</div>
           </div>

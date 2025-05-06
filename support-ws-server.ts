@@ -70,7 +70,45 @@ server.on('upgrade', (req, socket, head) => {
   });
 });
 
-server.listen(PORT);
+// Функция для освобождения порта, если он занят
+function tryToFreePort() {
+  try {
+    const { exec } = require('child_process');
+    console.log(`Attempting to free port ${PORT}...`);
+    // Освободить порт на macOS
+    if (process.platform === 'darwin') {
+      exec(`lsof -i tcp:${PORT} | grep LISTEN | awk '{print $2}' | xargs kill -9`);
+    } 
+    // Освободить порт на Linux/Windows
+    else {
+      exec(`fuser -k ${PORT}/tcp`);
+    }
+    console.log(`Port ${PORT} should be free now`);
+  } catch (err) {
+    console.error(`Failed to free port: ${err}`);
+  }
+}
+
+// Запускаем сервер с обработкой ошибки EADDRINUSE
+server.listen(PORT, () => {
+  console.log(`Support WebSocket server running on port ${PORT}`);
+});
+
+server.on('error', (err: any) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`Port ${PORT} is already in use. Trying to free it...`);
+    tryToFreePort();
+    // Пробуем запустить сервер снова через 1 секунду
+    setTimeout(() => {
+      server.close();
+      server.listen(PORT, () => {
+        console.log(`Support WebSocket server now running on port ${PORT}`);
+      });
+    }, 1000);
+  } else {
+    console.error(`Server error: ${err.message}`);
+  }
+});
 
 // Автоудаление старых сообщений (раз в час)
 setInterval(async () => {

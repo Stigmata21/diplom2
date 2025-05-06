@@ -5,30 +5,17 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NavButton from './NavButton';
 import Link from 'next/link';
+import Image from 'next/image';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { ThemeSwitcher } from '../../components/ui/ThemeSwitcher';
-import { useRouter } from 'next/navigation';
 import ProfileModal from './ProfileModal';
 import InvitesModal from './InvitesModal';
-
-interface User {
-    id: number;
-    username: string;
-    email: string;
-    avatar_url?: string;
-    role: string;
-}
-
-interface Company {
-    id: number;
-    name: string;
-}
 
 export default function Header() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isRegister, setIsRegister] = useState(false);
-    const { data: session, status } = useSession();
-    const user = session?.user;
+    const { data: session } = useSession();
+    const user = session?.user as { id: string; name: string; email: string; avatar_url?: string; role?: string } | undefined;
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -38,35 +25,16 @@ export default function Header() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const router = useRouter();
-    const [companies, setCompanies] = useState<Company[]>([]);
-    const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isInvitesOpen, setIsInvitesOpen] = useState(false);
     const [invitesCount, setInvitesCount] = useState(0);
-
-    useEffect(() => {
-        if (user) {
-            fetch('/api/companies')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.companies) {
-                        setCompanies(data.companies);
-                        setSelectedCompany(data.companies[0]?.id || null);
-                    }
-                });
-        } else {
-            setCompanies([]);
-            setSelectedCompany(null);
-        }
-    }, [user]);
 
     useEffect(() => {
         if (!user) return;
         fetch('/api/me/invites', { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
-                setInvitesCount((data.invites || []).filter((i: any) => i.status === 'pending').length);
+                setInvitesCount((data.invites || []).filter((i: { status: string }) => i.status === 'pending').length);
             })
             .catch(() => setInvitesCount(0));
     }, [user, isInvitesOpen]);
@@ -76,7 +44,7 @@ export default function Header() {
             const section = document.getElementById(sectionId);
             if (section) {
                 const headerHeight = document.querySelector('header')?.offsetHeight || 0;
-                let offset = sectionId === 'pricing' ? 50 : 0;
+                const offset = sectionId === 'pricing' ? 50 : 0;
                 const sectionTop = section.getBoundingClientRect().top + window.scrollY - headerHeight + offset;
                 window.scrollTo({ top: sectionTop, behavior: 'smooth' });
             }
@@ -190,10 +158,13 @@ export default function Header() {
             className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-white text-gray-800 rounded-xl shadow-xl p-4 z-50 border border-gray-100 overflow-hidden"
         >
             <div className="flex items-center mb-4">
-                <img
-                    src={user?.avatar_url || 'https://via.placeholder.com/40'}
+                <Image
+                    src={user?.avatar_url || '/avatar-placeholder.webp'}
                     alt="Аватар"
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full mr-3"
+                    loading="lazy"
                 />
                 <div>
                     <p className="font-semibold">{user?.name}</p>
@@ -240,7 +211,14 @@ export default function Header() {
             <header className="fixed top-0 w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-4 shadow-lg z-10">
                 <div className="container mx-auto px-6 flex justify-between items-center">
                     <div className="flex items-center">
-                        <img src="/logo.png" alt="Логотип" className="h-12 mr-3" />
+                        <Image
+                            src="/logo.webp"
+                            alt="Логотип"
+                            width={48}
+                            height={48}
+                            className="h-12 mr-3"
+                            loading="lazy"
+                        />
                         <span className="text-2xl font-bold">CompanySync</span>
                     </div>
                     <nav className="flex items-center space-x-4">
@@ -330,7 +308,14 @@ export default function Header() {
         <header className="fixed top-0 w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-4 shadow-lg z-10">
             <div className="container mx-auto px-4 flex justify-between items-center">
                 <div className="flex items-center">
-                    <img src="/logo.png" alt="Логотип" className="h-12 mr-3" />
+                    <Image
+                        src="/logo.webp"
+                        alt="Логотип"
+                        width={48}
+                        height={48}
+                        className="h-12 mr-3"
+                        loading="lazy"
+                    />
                     <span className="text-2xl font-bold">CompanySync</span>
                     {user && (
                         <Link href="/companies" className="ml-6 text-white hover:text-yellow-300 transition-colors text-lg">
@@ -362,11 +347,14 @@ export default function Header() {
                     </a>
                     {user && (
                         <div className="relative">
-                            <img
-                                src={user.avatar_url || 'https://via.placeholder.com/32'}
+                            <Image
+                                src={user.avatar_url || '/avatar-placeholder.webp'}
                                 alt="Аватар"
+                                width={32}
+                                height={32}
                                 className="w-8 h-8 rounded-full cursor-pointer"
                                 onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                loading="lazy"
                             />
                             <AnimatePresence>
                                 {isProfileOpen && renderProfileDropdown()}
@@ -408,7 +396,7 @@ export default function Header() {
                                     className="flex items-center space-x-2 py-2 px-2 rounded hover:bg-indigo-50"
                                     onClick={() => { setIsProfileOpen(!isProfileOpen); setMobileMenuOpen(false); }}
                                 >
-                                    <img src={user.avatar_url || 'https://via.placeholder.com/32'} alt="Аватар" className="w-8 h-8 rounded-full" />
+                                    <Image src={user.avatar_url || '/avatar-placeholder.webp'} alt="Аватар" width={32} height={32} className="w-8 h-8 rounded-full" loading="lazy" />
                                     <span>{user.name}</span>
                                 </button>
                             ) : (

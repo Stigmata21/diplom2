@@ -14,16 +14,9 @@ const TABS = [
 interface RightSidebarProps {
   open: boolean;
   onClose: () => void;
-  company?: any;
-  user?: any;
-  onUpdateCompany?: (data: any) => void;
-  onEmployeeAdd?: (email: string, role: string) => void;
-  onEmployeeRoleChange?: (userId: string, role: string) => void;
-  onEmployeeRemove?: (userId: string) => void;
-  onFileUpload?: (file: File) => void;
-  onFileDelete?: (fileId: string) => void;
-  onFinanceAdd?: (data: any) => void;
-  onPlanUpgrade?: () => void;
+  company?: { id?: number; name?: string; description?: string };
+  user?: { id?: number; role_in_company?: string };
+  onUpdateCompany?: (data: { id?: number; name?: string; description?: string }) => void;
 }
 
 export default function RightSidebar({
@@ -32,15 +25,9 @@ export default function RightSidebar({
   company,
   user,
   onUpdateCompany,
-  onEmployeeAdd,
-  onEmployeeRoleChange,
-  onEmployeeRemove,
-  onFileUpload,
-  onFileDelete,
-  onFinanceAdd,
-  onPlanUpgrade,
 }: RightSidebarProps) {
   const [activeTab, setActiveTab] = useState('profile');
+  const userRoleInCompany = user?.role_in_company || 'member';
 
   // Сброс вкладки при смене компании
   React.useEffect(() => {
@@ -104,18 +91,18 @@ export default function RightSidebar({
                         <input
                           type="text"
                           className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:bg-gray-800 dark:text-white"
-                          value={company?.name || ''}
+                          value={String(company?.name ?? '')}
                           onChange={e => onUpdateCompany && onUpdateCompany({ ...company, name: e.target.value })}
-                          disabled={user?.role_in_company !== 'owner' && user?.role_in_company !== 'admin'}
+                          disabled={userRoleInCompany !== 'owner' && userRoleInCompany !== 'admin'}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">Описание</label>
                         <textarea
                           className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:bg-gray-800 dark:text-white"
-                          value={company?.description || ''}
+                          value={String(company?.description ?? '')}
                           onChange={e => onUpdateCompany && onUpdateCompany({ ...company, description: e.target.value })}
-                          disabled={user?.role_in_company !== 'owner' && user?.role_in_company !== 'admin'}
+                          disabled={userRoleInCompany !== 'owner' && userRoleInCompany !== 'admin'}
                         />
                       </div>
                       {/* TODO: смена плана, кнопка апгрейда */}
@@ -134,11 +121,11 @@ export default function RightSidebar({
                     <CompanyEmployees
                       companyId={company.id}
                       currentUserId={user.id}
-                      currentUserRole={user.role_in_company}
+                      currentUserRole={userRoleInCompany}
                     />
                   </motion.div>
                 )}
-                {activeTab === 'files' && company?.id && user?.role_in_company && (
+                {activeTab === 'files' && company?.id && (
                   <motion.div
                     key="files"
                     initial={{ opacity: 0, x: 40 }}
@@ -149,7 +136,7 @@ export default function RightSidebar({
                   >
                     <CompanyFiles
                       companyId={company.id}
-                      canEdit={user.role_in_company === 'owner' || user.role_in_company === 'admin'}
+                      canEdit={userRoleInCompany === 'owner' || userRoleInCompany === 'admin'}
                     />
                   </motion.div>
                 )}

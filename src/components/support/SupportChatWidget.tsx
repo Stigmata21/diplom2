@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useUserStore } from '@/store/userStore';
+import Image from 'next/image';
 
 interface Message {
   from: "user" | "moderator";
@@ -79,7 +80,7 @@ export default function SupportChatWidget() {
     };
     setWs(socket);
     return () => { socket.close(); setWs(null); };
-  }, [session?.user?.id, setSupportUnreadCount, supportUnreadCount]);
+  }, [session?.user?.id, setSupportUnreadCount, supportUnreadCount, open]);
 
   // История
   useEffect(() => {
@@ -132,7 +133,7 @@ export default function SupportChatWidget() {
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-[95vw] max-w-md flex flex-col h-[70vh] animate-[fadeInUp_0.3s] border border-gray-200 dark:border-gray-800">
             {/* Хедер */}
             <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800">
-              <img src={supportAvatarUrl} alt="Модератор" className="w-10 h-10 rounded-full border-2 border-indigo-500" />
+              <Image src={supportAvatarUrl} alt="Модератор" width={40} height={40} className="w-10 h-10 rounded-full border-2 border-indigo-500" loading="lazy" />
               <div>
                 <div className="font-bold text-indigo-700 dark:text-white">Модератор</div>
                 <div className="text-xs text-gray-400 dark:text-gray-300">Онлайн</div>
@@ -152,7 +153,7 @@ export default function SupportChatWidget() {
                         {session?.user?.name?.[0] || session?.user?.email?.[0] || "?"}
                       </div>
                     ) : (
-                      <img src={supportAvatarUrl} alt="Модератор" className="w-8 h-8 rounded-full border-2 border-indigo-500 mr-2" />
+                      <Image src={supportAvatarUrl} alt="Модератор" width={32} height={32} className="w-8 h-8 rounded-full border-2 border-indigo-500 mr-2" loading="lazy" />
                     )}
                     <div className={`px-3 py-2 rounded-xl max-w-[70%] text-sm ${isOwnMessage(msg) ? "bg-indigo-600 text-white" : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800"}`}>
                       {msg.text || msg.message}

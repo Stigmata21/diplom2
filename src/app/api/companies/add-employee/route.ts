@@ -1,7 +1,8 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../../lib/db';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,6 @@ export async function POST(request: NextRequest) {
       // Автосоздание пользователя
       username = email.split('@')[0] + '_' + Math.random().toString(36).slice(2, 7);
       const tempPassword = Math.random().toString(36).slice(2, 10) + 'A1!';
-      const bcrypt = require('bcryptjs');
       const passwordHash = await bcrypt.hash(tempPassword, 10);
       const inserted = await query<{ id: number }>(
         'INSERT INTO users (username, email, password, role, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING id',
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Логируем добавление сотрудника
     await query('INSERT INTO company_logs (company_id, user_id, action, meta) VALUES ($1, $2, $3, $4)', [companyId, currentUserId, 'add_employee', JSON.stringify({ addedUserId: userId, email })]);
     return NextResponse.json({ employee: { id: userId, username, email, role_in_company: 'member' } }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 } 

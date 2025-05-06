@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 
 interface Log {
   id: number;
@@ -23,7 +23,7 @@ export default function AdminLogs() {
   const [total, setTotal] = useState(0);
   const pageSize = 20;
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true); setError('');
     try {
       const params = new URLSearchParams({
@@ -40,9 +40,9 @@ export default function AdminLogs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, action, from, to, page, pageSize]);
 
-  useEffect(() => { fetchLogs(); }, [user, action, from, to, page]);
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   const handleExport = async () => {
     const params = new URLSearchParams({ user, action, from, to, export: 'csv' });

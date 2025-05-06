@@ -1,13 +1,12 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../lib/db';
-import bcrypt from 'bcryptjs';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -24,14 +23,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest) {
+export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
-    const formData = await req.formData();
-    const updates: Record<string, any> = {};
+    const formData = await request.formData();
+    const updates: Record<string, unknown> = {};
     const email = formData.get('email');
     const username = formData.get('username');
     const avatarFile = formData.get('avatar') as File | null;
@@ -57,7 +56,7 @@ export async function PUT(req: NextRequest) {
     const setClause = Object.keys(updates)
       .map((key, i) => `${key} = $${i + 1}`)
       .join(', ');
-    const values = Object.values(updates);
+    const values = Object.values(updates) as (string | number | boolean | null)[];
     values.push(session.user.id);
     const result = await query(
       `UPDATE users SET ${setClause} WHERE id = $${values.length} RETURNING id, username, email, role, avatar_url`,

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       [companyId]
     );
     return NextResponse.json({ files }, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка получения файлов' }, { status: 500 });
   }
 }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       [companyId, 1, filename, url, mimetype, size] // user_id=1 заглушка
     );
     return NextResponse.json({ file: inserted[0] }, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка загрузки файла' }, { status: 500 });
   }
 }
@@ -51,7 +51,7 @@ export async function DELETE(request: NextRequest) {
   try {
     await query('UPDATE files SET deleted_at = NOW() WHERE id = $1', [id]);
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка удаления файла' }, { status: 500 });
   }
 } 

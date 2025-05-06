@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 
 const adminMenu = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
@@ -51,7 +52,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         style={{ minHeight: '100vh' }}
       >
         <div className="text-2xl font-bold text-indigo-700 mb-8 text-gray-800 dark:text-white flex items-center gap-2">
-          <img src="/logo.png" alt="logo" className="h-8 w-8" />
+          <Image src="/logo.webp" alt="logo" width={32} height={32} className="h-8 w-8" loading="lazy" />
           AdminPanel
         </div>
         <nav className="flex flex-col space-y-2">

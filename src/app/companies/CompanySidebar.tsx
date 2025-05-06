@@ -3,10 +3,11 @@ import EmployeesTab from "./EmployeesTab";
 import TasksTab from "./TasksTab";
 import NotesTab from "./NotesTab";
 import FinanceTab from "./FinanceTab";
-import CompanyFilesTab from './FilesTab';
+import FilesTab from './FilesTab';
 import { useSession, signOut } from 'next-auth/react';
 import { toast } from "react-hot-toast";
-import { Company, CompanyUser, CompanyInvite } from "./types";
+import { Company, CompanyUser } from "./types";
+import Image from 'next/image';
 
 interface Log {
   id: number;
@@ -32,17 +33,6 @@ const TABS = [
   { key: "settings", label: "Настройки" },
 ];
 
-function TabStub({ icon, title, description, onAdd }: { icon: React.ReactNode, title: string, description: string, onAdd?: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-300">
-      <div className="mb-4 text-5xl">{icon}</div>
-      <div className="text-xl font-bold mb-2 text-indigo-700 dark:text-white">{title}</div>
-      <div className="mb-4 text-gray-500 dark:text-gray-400">{description}</div>
-      {onAdd && <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg" onClick={onAdd}>Добавить</button>}
-    </div>
-  );
-}
-
 export default function CompanySidebar({ open, onClose, company, onEmployeesChange }: CompanySidebarProps) {
   const [activeTab, setActiveTab] = useState("employees");
   const { data: session } = useSession();
@@ -57,8 +47,6 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
   const [newOwnerId, setNewOwnerId] = useState("");
   const [logs, setLogs] = useState<Log[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-  const [invites, setInvites] = useState<CompanyInvite[]>([]);
-  const [invitesLoading, setInvitesLoading] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
   const [showLeft, setShowLeft] = useState(false);
   const [showRight, setShowRight] = useState(false);
@@ -116,20 +104,6 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
   }, [company]);
 
   useEffect(() => {
-    async function fetchInvites() {
-      if (!company?.id) return;
-      setInvitesLoading(true);
-      try {
-        const res = await fetch(`/api/companies/invites?companyId=${company.id}`);
-        const data = await res.json();
-        setInvites(data.invites || []);
-      } catch { setInvites([]); }
-      finally { setInvitesLoading(false); }
-    }
-    fetchInvites();
-  }, [company?.id]);
-
-  useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -179,8 +153,8 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
       if (userId === currentUserId && newRole !== 'owner' && newRole !== 'admin') {
         setTimeout(() => signOut({ callbackUrl: '/' }), 500);
       }
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Ошибка смены роли');
     }
   }
 
@@ -197,8 +171,8 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
       if (!res.ok) throw new Error(data.error || 'Ошибка удаления пользователя');
       toast.success('Пользователь удалён');
       await reloadCompany();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Ошибка удаления пользователя');
     }
   }
 
@@ -208,10 +182,12 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
       const res = await fetch(`/api/companies?companyId=${companyData.id}`);
       const data = await res.json();
       if (data.companies && data.companies.length > 0) {
-        const updated = data.companies.find((c: any) => c.id === companyData.id);
+        const updated = data.companies.find((c: { id: string }) => c.id === companyData.id);
         if (updated) setCompanyData(updated);
       }
-    } catch {}
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Ошибка удаления компании');
+    }
   }
 
   return (
@@ -275,7 +251,7 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
             <FinanceTab companyId={company.id} userId={currentUserId} userRole={currentUserCompanyRole} />
           )}
           {activeTab === "files" && (
-            <CompanyFilesTab companyId={company.id} />
+            <FilesTab companyId={company.id} />
           )}
           {activeTab === "settings" && (
             <div className="space-y-6">
@@ -285,7 +261,7 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
                   <h3 className="text-base sm:text-lg font-bold text-indigo-700 mb-2">Параметры компании</h3>
                   <div className="flex items-center gap-2 sm:gap-4 mb-2">
                     <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold">
-                      {companyData.logo ? <img src={companyData.logo} alt="logo" className="w-16 h-16 rounded-full object-cover" /> : companyData.name?.[0] || 'К'}
+                      {companyData.logo ? <Image src={companyData.logo} alt="logo" width={64} height={64} className="w-16 h-16 rounded-full object-cover" loading="lazy" /> : companyData.name?.[0] || 'К'}
                     </div>
                     <div>
                       <div className="font-semibold text-xl">{companyData.name}</div>
@@ -434,8 +410,8 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
                   setDeleteModal(false);
                   onClose();
                   // Можно вызвать onEmployeesChange или другой коллбек для обновления списка компаний
-                } catch (e: any) {
-                  toast.error(e.message);
+                } catch (e: unknown) {
+                  toast.error(e instanceof Error ? e.message : 'Ошибка удаления компании');
                 }
               }}>Удалить</button>
               <button className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 rounded-lg" onClick={() => setDeleteModal(false)}>Отмена</button>
@@ -488,8 +464,8 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
                     setOwnerModal(false);
                     setNewOwnerId("");
                     await reloadCompany();
-                  } catch (e: any) {
-                    toast.error(e.message);
+                  } catch (e: unknown) {
+                    toast.error(e instanceof Error ? e.message : 'Ошибка смены владельца');
                   }
                 }}
               >Сменить владельца</button>
@@ -502,9 +478,9 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
   );
 }
 
-function EditCompanyModal({ open, onClose, company, onSave }: { open: boolean, onClose: () => void, company: any, onSave: (data: { name: string; description: string }) => void }) {
-  const [name, setName] = useState(company.name || '');
-  const [description, setDescription] = useState(company.description || '');
+function EditCompanyModal({ open, onClose, company, onSave }: { open: boolean, onClose: () => void, company: Company, onSave: (data: { name: string; description: string }) => void }) {
+  const [name, setName] = useState(company?.name || "");
+  const [description, setDescription] = useState(company?.description || "");
   const [loading, setLoading] = useState(false);
   return open ? (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">

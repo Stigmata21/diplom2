@@ -1,5 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+
+// Эти маркеры нужны для конфигурации маршрута
+export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export async function GET() {
   try {
@@ -16,7 +20,7 @@ export async function GET() {
       logs: parseInt(logsRes[0]?.count || '0', 10),
       activity: activity.map(a => ({ day: a.day, count: parseInt(a.count, 10) }))
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 } 
