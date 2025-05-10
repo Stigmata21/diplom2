@@ -9,6 +9,20 @@ const nextConfig = {
       },
     ];
   },
+  // Отключаем оптимизацию изображений для директории uploads
+  images: {
+    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
   // Добавляем webpack конфигурацию для исправления проблемы с emitter
   webpack: (config, { isServer }) => {
     // Фикс для emitter и других зависимостей

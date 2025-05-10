@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Invite {
   id: string;
@@ -21,6 +22,12 @@ export default function InvitesModal({ open, onClose }: InvitesModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -57,13 +64,17 @@ export default function InvitesModal({ open, onClose }: InvitesModalProps) {
     }
   };
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md shadow-xl relative">
-        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-white text-2xl">×</button>
-        <h2 className="text-xl font-bold mb-4 text-green-800">Приглашения в компании</h2>
+  const modalContent = (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <button 
+          onClick={onClose} 
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-white text-2xl"
+          style={{ zIndex: 10 }}
+        >×</button>
+        <h2 className="text-xl font-bold mb-4 text-green-800 dark:text-green-400">Приглашения в компании</h2>
         {error && <div className="text-red-500 mb-2 text-sm">{error}</div>}
         {loading ? (
           <div className="text-gray-400 text-center py-8">Загрузка...</div>
@@ -99,4 +110,6 @@ export default function InvitesModal({ open, onClose }: InvitesModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 } 

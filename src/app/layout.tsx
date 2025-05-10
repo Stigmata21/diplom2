@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <html lang="ru" suppressHydrationWarning>
         <body className={inter.className}>
         <SessionProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <AnimatePresence mode="wait">
                 <motion.div
                     key={typeof window !== 'undefined' ? window.location.pathname : 'page'}
