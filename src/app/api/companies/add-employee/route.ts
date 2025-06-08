@@ -1,7 +1,8 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../../lib/db';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'companyId и email обязательны' }, { status: 400 });
     }
     // Проверяем, что currentUserId — owner или admin в этой компании
-    const rows = await query<any>(
+    const rows = await query<{ role_in_company: string }>(
       'SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2',
       [companyId, currentUserId]
     );
@@ -23,16 +24,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Нет прав на добавление сотрудников' }, { status: 403 });
     }
     // Ищем пользователя по email
-    let users = await query<any>('SELECT id, username, email FROM users WHERE email = $1', [email]);
+    let users = await query<{ id: number, username: string, email: string }>('SELECT id, username, email FROM users WHERE email = $1', [email]);
     let userId: number;
     let username: string;
     if (!users[0]) {
       // Автосоздание пользователя
       username = email.split('@')[0] + '_' + Math.random().toString(36).slice(2, 7);
       const tempPassword = Math.random().toString(36).slice(2, 10) + 'A1!';
-      const bcrypt = require('bcryptjs');
       const passwordHash = await bcrypt.hash(tempPassword, 10);
-      const inserted = await query<any>(
+      const inserted = await query<{ id: number }>(
         'INSERT INTO users (username, email, password, role, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING id',
         [username, email, passwordHash, 'user', true]
       );
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       username = users[0].username;
     }
     // Проверяем, не состоит ли уже в компании
-    const exists = await query<any>('SELECT 1 FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
+    const exists = await query<{ exists: number }>('SELECT 1 as exists FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
     if (exists[0]) {
       return NextResponse.json({ error: 'Пользователь уже в компании' }, { status: 409 });
     }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Логируем добавление сотрудника
     await query('INSERT INTO company_logs (company_id, user_id, action, meta) VALUES ($1, $2, $3, $4)', [companyId, currentUserId, 'add_employee', JSON.stringify({ addedUserId: userId, email })]);
     return NextResponse.json({ employee: { id: userId, username, email, role_in_company: 'member' } }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 } 

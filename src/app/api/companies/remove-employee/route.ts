@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../../lib/db';
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Нельзя удалить себя' }, { status: 403 });
     }
     // Проверяем роль удаляемого
-    const target = await query<any>('SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
+    const target = await query<{ role_in_company: string }>('SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2', [companyId, userId]);
     if (!target[0]) {
       return NextResponse.json({ error: 'Пользователь не найден в компании' }, { status: 404 });
     }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Нельзя удалить владельца' }, { status: 403 });
     }
     // Проверяем, что currentUserId — owner или admin в этой компании
-    const rows = await query<any>(
+    const rows = await query<{ role_in_company: string }>(
       'SELECT role_in_company FROM company_users WHERE company_id = $1 AND user_id = $2',
       [companyId, currentUserId]
     );
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Логируем удаление сотрудника
     await query('INSERT INTO company_logs (company_id, user_id, action, meta) VALUES ($1, $2, $3, $4)', [companyId, currentUserId, 'remove_employee', JSON.stringify({ removedUserId: userId })]);
     return NextResponse.json({ message: 'Сотрудник удалён' }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 } 

@@ -37,8 +37,8 @@ export default function CompanyFiles({ companyId, canEdit }: CompanyFilesProps) 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки файлов');
       setFiles(data.files);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
     } finally {
       setLoading(false);
     }
@@ -53,8 +53,8 @@ export default function CompanyFiles({ companyId, canEdit }: CompanyFilesProps) 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка удаления файла');
       setFiles(files.filter(f => f.id !== fileId));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
     } finally {
       setLoading(false);
     }
@@ -74,8 +74,8 @@ export default function CompanyFiles({ companyId, canEdit }: CompanyFilesProps) 
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки файла');
       setFiles([data.file, ...files]);
       if (fileInputRef.current) fileInputRef.current.value = '';
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
     } finally {
       setUploading(false);
     }

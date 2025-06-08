@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '../../../../../lib/db';
 
@@ -16,12 +16,12 @@ export async function GET(request: NextRequest) {
     const companyId = searchParams.get('companyId');
     let logs;
     if (companyId) {
-      logs = await query('SELECT * FROM company_logs WHERE company_id = $1 ORDER BY created_at DESC LIMIT 100', [companyId]);
+      logs = await query<unknown>('SELECT * FROM company_logs WHERE company_id = $1 ORDER BY created_at DESC LIMIT 100', [companyId]);
     } else {
-      logs = await query('SELECT * FROM company_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100', [userId]);
+      logs = await query<unknown>('SELECT * FROM company_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100', [userId]);
     }
     return NextResponse.json({ logs });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 } 

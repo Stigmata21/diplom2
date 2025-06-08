@@ -42,9 +42,9 @@ export default function Support() {
 
             setSuccessMessage(data.message);
             setMessage('');
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Support submit error:', err);
-            setError(err.message);
+            setError(err instanceof Error ? err.message : 'Ошибка');
         }
     };
 

@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 
 const adminMenu = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
@@ -43,18 +44,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:static top-0 left-0 z-40 h-full w-64 bg-white dark:bg-gray-900 shadow-lg flex flex-col p-6 space-y-4
+          fixed md:static top-0 left-0 z-40 h-screen w-64 bg-white dark:bg-gray-900 shadow-lg flex flex-col p-6 space-y-4
           transition-transform duration-300
           ${open ? "translate-x-0" : "-translate-x-full"}
           md:translate-x-0
         `}
-        style={{ minHeight: '100vh' }}
       >
         <div className="text-2xl font-bold text-indigo-700 mb-8 text-gray-800 dark:text-white flex items-center gap-2">
-          <img src="/logo.png" alt="logo" className="h-8 w-8" />
           AdminPanel
         </div>
-        <nav className="flex flex-col space-y-2">
+        <nav className="flex flex-col space-y-2 flex-1 overflow-y-auto">
           {adminMenu.map(({ href, label, icon }) => (
             <Link
               key={href}

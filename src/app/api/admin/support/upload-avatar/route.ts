@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const filePath = path.join(process.cwd(), 'public', fileName);
     await writeFile(filePath, buffer);
     return NextResponse.json({ url: `/${fileName}` });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка загрузки' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка загрузки' }, { status: 500 });
   }
 } 

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import Image from 'next/image';
 
 interface Message {
   from: "user" | "moderator";
@@ -46,7 +47,13 @@ export default function SupportModeratorPanel() {
   // ws connect
   useEffect(() => {
     if (!session?.user?.id) return;
-    const socket = new window.WebSocket(`ws://localhost:4001/?userId=${session.user.id}&moderator=1`);
+    let wsBase = '';
+    if (typeof window !== 'undefined') {
+      wsBase = process.env.NEXT_PUBLIC_WS_URL || (window.location.protocol === 'https:'
+        ? `wss://${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
+        : `ws://${window.location.hostname}:4001`);
+    }
+    const socket = new window.WebSocket(`${wsBase}/?userId=${session.user.id}&moderator=1`);
     socket.onmessage = e => {
       try {
         const msg = JSON.parse(e.data);
@@ -67,14 +74,17 @@ export default function SupportModeratorPanel() {
   }, [session?.user?.id, selectedUser?.id]);
 
   // История
-  useEffect(() => {
+  const fetchMessages = async () => {
     if (!selectedUser) return;
     setLoading(true);
-    fetch(`/api/admin/support/chat?userId=${selectedUser.id}`)
-      .then(r => r.json())
-      .then(data => setMessages(data.messages || []))
-      .finally(() => setLoading(false));
-  }, [selectedUser]);
+    try {
+      const res = await fetch(`/api/admin/support/chat?userId=${selectedUser.id}`);
+      const data = await res.json();
+      setMessages(data.messages || []);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Авто-скролл вниз
   useEffect(() => {
@@ -84,6 +94,11 @@ export default function SupportModeratorPanel() {
   // Сброс счётчика при открытии чата
   useEffect(() => {
     if (selectedUser) setUnread(u => ({ ...u, [selectedUser.id]: 0 }));
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (selectedUser) fetchMessages();
+    // eslint-disable-next-line
   }, [selectedUser]);
 
   const handleSend = () => {
@@ -125,7 +140,7 @@ export default function SupportModeratorPanel() {
         <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800">
           {selectedUser ? (
             <>
-              <img src={supportAvatarUrl} alt="Модератор" className="w-10 h-10 rounded-full border-2 border-indigo-500" />
+              <Image src={supportAvatarUrl} alt="Модератор" width={40} height={40} className="w-10 h-10 rounded-full border-2 border-indigo-500" loading="lazy" />
               <div className="font-bold text-indigo-700 dark:text-white">{selectedUser.name}</div>
             </>
           ) : <div className="text-gray-400">Выберите пользователя</div>}
@@ -141,7 +156,7 @@ export default function SupportModeratorPanel() {
                         {selectedUser?.name?.[0] || "?"}
                       </div>
                     ) : (
-                      <img src={supportAvatarUrl} alt="Модератор" className="w-8 h-8 rounded-full border-2 border-indigo-500 ml-2" />
+                      <Image src={supportAvatarUrl} alt="Модератор" width={32} height={32} className="w-8 h-8 rounded-full border-2 border-indigo-500 ml-2" loading="lazy" />
                     )}
                     <div className={`px-3 py-2 rounded-2xl max-w-[70%] text-sm ${isOwnMessage(msg) ? "bg-indigo-600 text-white" : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-indigo-100 dark:border-gray-800"}`}>
                       {msg.text || msg.message}

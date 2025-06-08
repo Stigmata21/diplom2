@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import Image from 'next/image';
 
 const CATEGORIES = [
   'Зарплата', 'Аренда', 'Услуги', 'Налоги', 'Продажи', 'Инвестиции', 'Прочее'
@@ -43,7 +44,7 @@ export default function FinanceTab({ companyId, userId, userRole }: { companyId:
   const isAdmin = userRole === 'owner' || userRole === 'admin';
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  async function fetchRecords() {
+  const fetchRecords = useCallback(async () => {
     setLoading(true); setError("");
     try {
       const params = new URLSearchParams();
@@ -52,15 +53,15 @@ export default function FinanceTab({ companyId, userId, userRole }: { companyId:
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Ошибка загрузки финансов");
       setRecords(data.records || []);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Ошибка загрузки финансов");
       setRecords([]);
     } finally {
       setLoading(false);
     }
-  }
+  }, [companyId, filters]);
 
-  useEffect(() => { if (companyId) fetchRecords(); }, [companyId, JSON.stringify(filters)]);
+  useEffect(() => { if (companyId) fetchRecords(); }, [companyId, fetchRecords]);
 
   // Получение вложений для записи
   async function fetchFiles(recordId: string): Promise<FileAttachment[]> {
@@ -141,17 +142,15 @@ export default function FinanceTab({ companyId, userId, userRole }: { companyId:
         >
           <SortableContext items={records.map(r => r.id)} strategy={verticalListSortingStrategy}>
             <ul className="divide-y divide-gray-200 dark:divide-gray-800">
-              {records.map((rec, idx) => {
+              {records.map((rec) => {
                 const canEdit = isAdmin || (rec.author_id === userId && rec.status === 'pending');
                 const canDelete = canEdit;
                 const canApprove = isAdmin && rec.status === 'pending';
                 const canReject = isAdmin && rec.status === 'pending';
                 return (
-                  <SortableItem rec={rec} idx={idx} key={rec.id}>
+                  <SortableItem rec={rec} key={rec.id}>
                     <FinanceRecordRow
                       rec={rec}
-                      isAdmin={isAdmin}
-                      userId={userId}
                       canEdit={canEdit}
                       canDelete={canDelete}
                       canApprove={canApprove}
@@ -172,7 +171,6 @@ export default function FinanceTab({ companyId, userId, userRole }: { companyId:
       )}
       {showModal && (
         <FinanceModal
-          open={showModal}
           onClose={() => { setShowModal(false); setEditRecord(null); }}
           onSave={async (rec) => {
             try {
@@ -200,13 +198,12 @@ export default function FinanceTab({ companyId, userId, userRole }: { companyId:
               setShowModal(false);
               setEditRecord(null);
               fetchRecords();
-            } catch (err: any) {
-              alert(err.message);
+            } catch (err: unknown) {
+              alert(err instanceof Error ? err.message : 'Ошибка');
             }
           }}
           userRole={userRole}
           initial={editRecord}
-          companyId={companyId}
         />
       )}
       {deleteRecord && (
@@ -224,22 +221,6 @@ export default function FinanceTab({ companyId, userId, userRole }: { companyId:
     </div>
   );
 
-  async function handleStatus(rec: Record, newStatus: string) {
-    try {
-      const res = await fetch(`/api/companies/${companyId}/finance/${rec.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ ...rec, status: newStatus }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Ошибка обновления статуса");
-      fetchRecords();
-    } catch (err: any) {
-      alert(err.message);
-    }
-  }
-
   async function handleDelete() {
     if (!deleteRecord) return;
     try {
@@ -251,19 +232,17 @@ export default function FinanceTab({ companyId, userId, userRole }: { companyId:
       if (!res.ok) throw new Error(data.error || "Ошибка удаления записи");
       setDeleteRecord(null);
       fetchRecords();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Ошибка');
     }
   }
 }
 
-function FinanceModal({ open, onClose, onSave, userRole, initial, companyId }: {
-  open: boolean;
+function FinanceModal({ onClose, onSave, userRole, initial }: {
   onClose: () => void;
   onSave: (rec: { type: string; category: string; amount: number; currency: string; description: string; status?: string }) => void;
   userRole: string;
   initial?: Record | null;
-  companyId: string;
 }) {
   const [type, setType] = useState<'income' | 'expense'>(initial?.type || 'expense');
   const [category, setCategory] = useState(initial?.category || CATEGORIES[0]);
@@ -294,42 +273,6 @@ function FinanceModal({ open, onClose, onSave, userRole, initial, companyId }: {
     e.preventDefault();
     setDragActive(false);
     if (e.dataTransfer.files) setFiles(Array.from(e.dataTransfer.files));
-  }
-
-  async function checkRecordExists(recordId: string): Promise<boolean> {
-    // Проверяем, существует ли запись в finance_records
-    const res = await fetch(`/api/companies/${companyId}/finance/${recordId}`);
-    if (!res.ok) return false;
-    const data = await res.json();
-    return !!data.record;
-  }
-
-  async function handleUpload(recordId: string) {
-    setUploadError("");
-    // Проверяем, существует ли запись
-    const exists = await checkRecordExists(recordId);
-    if (!exists) {
-      setUploadError("Финансовая запись не найдена. Сначала сохраните запись, затем добавьте вложения.");
-      return;
-    }
-    let success = false;
-    for (const file of files) {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch(`/api/companies/${companyId}/finance/${recordId}/files`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setUploadError(data.error || 'Ошибка загрузки файла');
-        return;
-      } else {
-        success = true;
-      }
-    }
-    if (success) setFiles([]); // сбросить выбранные файлы
   }
 
   return (
@@ -384,7 +327,7 @@ function FinanceModal({ open, onClose, onSave, userRole, initial, companyId }: {
   );
 }
 
-function SortableItem({ rec, idx, children }: { rec: Record, idx: number, children: React.ReactNode }) {
+function SortableItem({ rec, children }: { rec: Record, children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: rec.id });
   return (
     <li
@@ -401,8 +344,6 @@ function SortableItem({ rec, idx, children }: { rec: Record, idx: number, childr
 
 function FinanceRecordRow({
   rec,
-  isAdmin,
-  userId,
   canEdit,
   canDelete,
   canApprove,
@@ -413,21 +354,36 @@ function FinanceRecordRow({
   deleteFile,
   deleteFilesBulk,
   fetchFiles
-}: any) {
+}: {
+  rec: Record;
+  canEdit: boolean;
+  canDelete: boolean;
+  canApprove: boolean;
+  canReject: boolean;
+  setEditRecord: React.Dispatch<React.SetStateAction<Record | null>>;
+  setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
+  setDeleteRecord: React.Dispatch<React.SetStateAction<Record | null>>;
+  deleteFile: (recordId: string, fileId: string) => Promise<void>;
+  deleteFilesBulk: (recordId: string, fileIds: string[]) => Promise<void>;
+  fetchFiles: (recordId: string) => Promise<FileAttachment[]>;
+}) {
   const [files, setFiles] = useState<FileAttachment[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [filesError, setFilesError] = useState<string>("");
-  const reloadFiles = async () => {
+  
+  const reloadFiles = useCallback(async () => {
     try {
       const f = await fetchFiles(rec.id);
       setFiles(f);
       setFilesError("");
-    } catch (e: any) {
+    } catch (e: unknown) {
       setFiles([]);
-      setFilesError(e.message || "Ошибка загрузки вложений");
+      setFilesError(e instanceof Error ? e.message : "Ошибка загрузки вложений");
     }
-  };
-  useEffect(() => { reloadFiles(); }, [rec.id]);
+  }, [rec.id, fetchFiles]);
+  
+  useEffect(() => { reloadFiles(); }, [reloadFiles]);
+
   return (
     <>
       <div>
@@ -448,7 +404,7 @@ function FinanceRecordRow({
               )}
               <a href={f.url} download className="underline text-indigo-600 mr-1" target="_blank" rel="noopener noreferrer">{f.filename}</a>
               {f.mimetype.startsWith('image/') && (
-                <img src={f.url} alt={f.filename} className="w-8 h-8 object-cover rounded ml-1 border" style={{ display: 'inline-block' }} />
+                <Image src={f.url} alt={f.filename} width={32} height={32} className="w-8 h-8 object-cover rounded ml-1 border" style={{ display: 'inline-block' }} loading="lazy" />
               )}
               {canEdit && (
                 <button className="text-red-500 ml-1" title="Удалить" onClick={async () => { await deleteFile(rec.id, f.id); setFiles(files.filter(x => x.id !== f.id)); }}>✕</button>

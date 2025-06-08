@@ -1,13 +1,8 @@
 // src/app/api/companies/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { query } from '../../../../lib/db';
-import { z } from 'zod';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
-
-interface CompanyInsertResult {
-    id: number;
-}
+import { authOptions } from '@/app/api/auth/authOptions';
+import { NextResponse } from 'next/server';
+import { query } from '../../../../lib/db';
 
 interface Company {
     id: number;
@@ -18,33 +13,9 @@ interface Company {
     updated_at: string;
 }
 
-interface CompanyResponse {
-    company?: Company;
-    message?: string;
-    error?: string;
-}
-
-interface DeleteResponse {
-    message?: string;
-    error?: string;
-}
-
 interface CompanyMember {
     role_in_company: string;
 }
-
-const companySchema = z.object({
-    name: z.string().min(2).max(64),
-    description: z.string().max(256).optional(),
-    role_in_company: z.string().min(2).max(32).optional(),
-});
-
-const updateCompanySchema = z.object({
-    companyId: z.number(),
-    name: z.string().min(2).max(64),
-    description: z.string().max(256).optional(),
-    role_in_company: z.string().min(2).max(32).optional(),
-});
 
 export async function GET(request: Request) {
     try {
@@ -80,8 +51,8 @@ export async function GET(request: Request) {
         sql += ' ORDER BY c.created_at DESC';
 
         const companies = await query<Company>(sql, params);
-        const companiesWithUsers = await Promise.all(companies.map(async (company) => {
-            const users = await query<any>(
+        const companiesWithUsers = await Promise.all(companies.map(async (company: Company) => {
+            const users = await query<unknown>(
                 `SELECT u.id, u.username as name, u.email, cu.role_in_company as role
                  FROM company_users cu
                  JOIN users u ON cu.user_id = u.id
@@ -144,10 +115,13 @@ export async function PUT(request: Request) {
         }
         const userId = session.user.id;
 
-        const { companyId, name, description, role_in_company } = await request.json();
+        const { companyId, name, description } = await request.json();
 
-        if (!companyId || !name || !description || !role_in_company) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!companyId) {
+            return NextResponse.json({ error: 'Missing companyId' }, { status: 400 });
+        }
+        if (!name && !description) {
+            return NextResponse.json({ error: 'Нет данных для обновления' }, { status: 400 });
         }
 
         const member = await query<CompanyMember>(
@@ -159,11 +133,17 @@ export async function PUT(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
-        const result = await query<Company>(
-            `UPDATE companies SET name = $1, description = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
-            [name, description, companyId]
-        );
+        // Формируем динамический запрос
+        const fields = [];
+        const values = [];
+        let idx = 1;
+        if (name) { fields.push(`name = $${idx++}`); values.push(name); }
+        if (description) { fields.push(`description = $${idx++}`); values.push(description); }
+        fields.push(`updated_at = NOW()`);
+        values.push(companyId);
 
+        const sql = `UPDATE companies SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
+        const result = await query<Company>(sql, values);
         const company = result[0];
 
         return NextResponse.json({ 

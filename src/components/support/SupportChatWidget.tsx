@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useUserStore } from '@/store/userStore';
+import Image from 'next/image';
 
 interface Message {
   from: "user" | "moderator";
@@ -42,7 +43,13 @@ export default function SupportChatWidget() {
   // ws connect
   useEffect(() => {
     if (!session?.user?.id) return;
-    const socket = new window.WebSocket(`ws://localhost:4001/?userId=${session.user.id}`);
+    let wsBase = '';
+    if (typeof window !== 'undefined') {
+      wsBase = process.env.NEXT_PUBLIC_WS_URL || (window.location.protocol === 'https:'
+        ? `wss://${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
+        : `ws://${window.location.hostname}:4001`);
+    }
+    const socket = new window.WebSocket(`${wsBase}/?userId=${session.user.id}`);
     socket.onmessage = e => {
       try {
         const msg = JSON.parse(e.data);
@@ -73,7 +80,7 @@ export default function SupportChatWidget() {
     };
     setWs(socket);
     return () => { socket.close(); setWs(null); };
-  }, [session?.user?.id, setSupportUnreadCount, supportUnreadCount]);
+  }, [session?.user?.id, setSupportUnreadCount, supportUnreadCount, open]);
 
   // История
   useEffect(() => {
@@ -107,12 +114,6 @@ export default function SupportChatWidget() {
     return msg.from === "user" && String(msg.userId) === String(session?.user?.id);
   }
 
-  // DEBUG
-  if (typeof window !== 'undefined') {
-    console.log('session.user.id', session?.user?.id);
-    console.log('messages', messages);
-  }
-
   return (
     <>
       <audio ref={audioRef} src="/support-notify.mp3" preload="auto" />
@@ -129,22 +130,22 @@ export default function SupportChatWidget() {
       {/* Модалка чата */}
       {open && (
         <div className="fixed bottom-24 right-6 z-50 flex items-end justify-end">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-[95vw] max-w-md flex flex-col h-[70vh] animate-[fadeInUp_0.3s]">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-[95vw] max-w-md flex flex-col h-[70vh] animate-[fadeInUp_0.3s] border border-gray-200 dark:border-gray-800">
             {/* Хедер */}
             <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800">
-              <img src={supportAvatarUrl} alt="Модератор" className="w-10 h-10 rounded-full border-2 border-indigo-500" />
+              <Image src={supportAvatarUrl} alt="Модератор" width={40} height={40} className="w-10 h-10 rounded-full border-2 border-indigo-500" loading="lazy" />
               <div>
                 <div className="font-bold text-indigo-700 dark:text-white">Модератор</div>
-                <div className="text-xs text-gray-400">Онлайн</div>
+                <div className="text-xs text-gray-400 dark:text-gray-300">Онлайн</div>
               </div>
               <button className="ml-auto text-gray-400 hover:text-gray-700 dark:hover:text-white" onClick={() => setOpen(false)}>
                 <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M6 6l12 12M6 18L18 6"/></svg>
               </button>
             </div>
             {/* Сообщения */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-indigo-50 dark:bg-gray-950">
-              {loading ? <div className="text-gray-400 text-center mt-8">Загрузка...</div> :
-                messages.length === 0 ? <div className="text-gray-400 text-center mt-8">Нет сообщений</div> :
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 dark:bg-gray-950">
+              {loading ? <div className="text-gray-400 dark:text-gray-300 text-center mt-8">Загрузка...</div> :
+                messages.length === 0 ? <div className="text-gray-400 dark:text-gray-300 text-center mt-8">Нет сообщений</div> :
                 messages.map((msg, i) => (
                   <div key={i} className={`flex items-end gap-2 ${isOwnMessage(msg) ? "justify-end" : "justify-start"}`}>
                     {isOwnMessage(msg) ? (
@@ -152,11 +153,11 @@ export default function SupportChatWidget() {
                         {session?.user?.name?.[0] || session?.user?.email?.[0] || "?"}
                       </div>
                     ) : (
-                      <img src={supportAvatarUrl} alt="Модератор" className="w-8 h-8 rounded-full border-2 border-indigo-500 mr-2" />
+                      <Image src={supportAvatarUrl} alt="Модератор" width={32} height={32} className="w-8 h-8 rounded-full border-2 border-indigo-500 mr-2" loading="lazy" />
                     )}
-                    <div className={`px-3 py-2 rounded-2xl max-w-[70%] text-sm ${isOwnMessage(msg) ? "bg-indigo-600 text-white" : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-indigo-100 dark:border-gray-800"}`}>
+                    <div className={`px-3 py-2 rounded-xl max-w-[70%] text-sm ${isOwnMessage(msg) ? "bg-indigo-600 text-white" : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800"}`}>
                       {msg.text || msg.message}
-                      {msg.status === "pending" && <span className="ml-2 text-xs text-gray-400">⏳</span>}
+                      {msg.status === "pending" && <span className="ml-2 text-xs text-gray-400 dark:text-gray-300">⏳</span>}
                       {msg.status === "error" && <span className="ml-2 text-xs text-red-500">Ошибка</span>}
                     </div>
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 interface Task {
   id: string;
@@ -17,28 +17,22 @@ interface Employee {
 
 export default function TasksTab({ companyId, isOwner }: { companyId: string, isOwner?: boolean }) {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
 
-  async function fetchTasks() {
-    setLoading(true); setError("");
+  const fetchTasks = useCallback(async () => {
     try {
       const res = await fetch(`/api/companies/${companyId}/tasks`, { credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Ошибка загрузки задач");
       setTasks(data.tasks || []);
-    } catch (err: any) {
-      setError(err.message);
+    } catch {
       setTasks([]);
-    } finally {
-      setLoading(false);
     }
-  }
+  }, [companyId]);
 
-  useEffect(() => { if (companyId) fetchTasks(); }, [companyId]);
+  useEffect(() => { if (companyId) fetchTasks(); }, [companyId, fetchTasks]);
 
   async function handleStatusToggle(task: Task) {
     if (!isOwner) return;
@@ -57,8 +51,8 @@ export default function TasksTab({ companyId, isOwner }: { companyId: string, is
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Ошибка обновления статуса");
       fetchTasks();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Ошибка обновления статуса');
     }
   }
 
@@ -73,8 +67,8 @@ export default function TasksTab({ companyId, isOwner }: { companyId: string, is
       if (!res.ok) throw new Error(data.error || "Ошибка удаления задачи");
       setDeleteTask(null);
       fetchTasks();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Ошибка удаления задачи');
     }
   }
 
@@ -88,11 +82,7 @@ export default function TasksTab({ companyId, isOwner }: { companyId: string, is
           </button>
         )}
       </div>
-      {loading ? (
-        <div className="text-gray-400 text-center py-8">Загрузка задач...</div>
-      ) : error ? (
-        <div className="text-red-500 text-center py-8">{error}</div>
-      ) : tasks.length === 0 ? (
+      {tasks.length === 0 ? (
         <div className="text-gray-400 text-center py-8">Нет задач</div>
       ) : (
         <ul className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -120,7 +110,6 @@ export default function TasksTab({ companyId, isOwner }: { companyId: string, is
       )}
       {showModal && (
         <TaskModal
-          open={showModal}
           onClose={() => setShowModal(false)}
           onSave={async (task) => {
             try {
@@ -147,8 +136,8 @@ export default function TasksTab({ companyId, isOwner }: { companyId: string, is
               }
               setShowModal(false);
               fetchTasks();
-            } catch (err: any) {
-              alert(err.message);
+            } catch (err: unknown) {
+              alert(err instanceof Error ? err.message : 'Ошибка сохранения задачи');
             }
           }}
           initial={editTask}
@@ -171,8 +160,7 @@ export default function TasksTab({ companyId, isOwner }: { companyId: string, is
   );
 }
 
-function TaskModal({ open, onClose, onSave, initial, companyId }: {
-  open: boolean;
+function TaskModal({ onClose, onSave, initial, companyId }: {
   onClose: () => void;
   onSave: (task: { title: string; description: string; status: string; assignee_id?: string }) => void;
   initial?: Task | null;
@@ -183,22 +171,22 @@ function TaskModal({ open, onClose, onSave, initial, companyId }: {
   const [status, setStatus] = useState(initial?.status || "open");
   const [assignee, setAssignee] = useState(initial?.assignee_id || "");
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchEmployees() {
-      setLoading(true); setError("");
       try {
         const res = await fetch(`/api/companies/${companyId}/employees`, { credentials: "include" });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Ошибка загрузки сотрудников");
-        setEmployees((data.employees || []).map((e: any) => ({ id: e.id, name: e.username, email: e.email })));
-      } catch (err: any) {
-        setError(err.message);
+        setEmployees((data.employees || []).map((e: unknown) => {
+          if (typeof e === 'object' && e !== null && 'id' in e && 'username' in e && 'email' in e) {
+            const emp = e as { id: string; username: string; email: string };
+            return { id: emp.id, name: emp.username, email: emp.email };
+          }
+          return { id: '', name: '', email: '' };
+        }));
+      } catch {
         setEmployees([]);
-      } finally {
-        setLoading(false);
       }
     }
     fetchEmployees();
@@ -217,8 +205,8 @@ function TaskModal({ open, onClose, onSave, initial, companyId }: {
           </select>
           <select value={assignee} onChange={e => setAssignee(e.target.value)} className="w-full p-2 border rounded-lg">
             <option value="">Без исполнителя</option>
-            {employees.map(emp => (
-              <option key={emp.id} value={emp.id}>{emp.name} ({emp.email})</option>
+            {employees.filter(emp => emp.id).map(emp => (
+              <option key={String(emp.id)} value={String(emp.id)}>{emp.name} ({emp.email})</option>
             ))}
           </select>
           <div className="flex gap-2 mt-4">

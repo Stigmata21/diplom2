@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import DeleteCompanyModal from './DeleteCompanyModal';
 
 interface Company {
   id: number;
@@ -23,8 +24,10 @@ export default function AdminCompanies() {
   const [editCompany, setEditCompany] = useState<Company | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
 
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -33,26 +36,39 @@ export default function AdminCompanies() {
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
       setCompanies(data.companies);
       setTotal(data.total);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }
+  }, [search, page]);
+
+  useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
+
+  const handleDeleteClick = (company: Company) => {
+    setCompanyToDelete(company);
+    setDeleteModalOpen(true);
   };
 
-  useEffect(() => { fetchCompanies(); }, [search, page]);
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false);
+    setCompanyToDelete(null);
+  };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Удалить компанию?')) return;
+  const handleDelete = async () => {
+    if (!companyToDelete) return;
+    
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/admin/companies?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/companies?id=${companyToDelete.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка удаления');
       fetchCompanies();
-    } catch (err: any) {
-      setError(err.message);
+      setDeleteModalOpen(false);
+      setCompanyToDelete(null);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -75,8 +91,8 @@ export default function AdminCompanies() {
       setShowModal(false);
       setEditCompany(null);
       fetchCompanies();
-    } catch (err: any) {
-      setModalError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setModalError(err.message);
     } finally {
       setModalLoading(false);
     }
@@ -120,7 +136,7 @@ export default function AdminCompanies() {
                 <td className="p-3">{c.created}</td>
                 <td className="p-3 space-x-2">
                   <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg" onClick={() => { setEditCompany(c); setShowModal(true); }}>Редактировать</button>
-                  <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg" onClick={() => handleDelete(c.id)}>Удалить</button>
+                  <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg" onClick={() => handleDeleteClick(c)}>Удалить</button>
                 </td>
               </tr>
             ))}
@@ -150,6 +166,15 @@ export default function AdminCompanies() {
           error={modalError}
         />
       )}
+      <DeleteCompanyModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDelete}
+        companyName={companyToDelete?.name || ''}
+        companyId={companyToDelete?.id || 0}
+        isLoading={loading}
+        userCount={companyToDelete?.users || 0}
+      />
     </div>
   );
 }

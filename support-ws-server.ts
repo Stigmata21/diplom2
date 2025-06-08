@@ -28,7 +28,6 @@ wss.on('connection', (ws: any, req: http.IncomingMessage, userId: string, isMode
   ws.on('message', async (msg: Buffer) => {
     try {
       const data = JSON.parse(msg.toString());
-      console.log('[WS][INCOMING]', { userId, isModerator, data });
       if (data.type === 'message') {
         const text = data.text?.trim();
         if (!text) return;
@@ -38,7 +37,6 @@ wss.on('connection', (ws: any, req: http.IncomingMessage, userId: string, isMode
           await dbQuery('INSERT INTO support_chat (user_id, moderator_id, message, from_moderator) VALUES ($1, $2, $3, TRUE)', [data.to, userId, text]);
           const target = clients.get(data.to);
           const payload = { from: 'moderator', text, moderatorId: userId, userId: data.to, created_at: new Date().toISOString() };
-          console.log('[WS][SEND][mod->user]', payload);
           if (target) target.send(JSON.stringify(payload));
         } else {
           // user -> moderator
@@ -46,13 +44,12 @@ wss.on('connection', (ws: any, req: http.IncomingMessage, userId: string, isMode
           if (activeSupportModeratorId) {
             const modWs = clients.get(activeSupportModeratorId + '_mod');
             const payload = { from: 'user', text, userId, moderatorId: activeSupportModeratorId, created_at: new Date().toISOString() };
-            console.log('[WS][SEND][user->mod]', payload);
             if (modWs) modWs.send(JSON.stringify(payload));
           }
         }
       }
     } catch (err) {
-      console.error('[WS][ERROR]', err);
+      // No console.error here
     }
   });
 
@@ -73,8 +70,44 @@ server.on('upgrade', (req, socket, head) => {
   });
 });
 
+// Функция для освобождения порта, если он занят
+function tryToFreePort() {
+  try {
+    const { exec } = require('child_process');
+    console.log(`Attempting to free port ${PORT}...`);
+    // Освободить порт на macOS
+    if (process.platform === 'darwin') {
+      exec(`lsof -i tcp:${PORT} | grep LISTEN | awk '{print $2}' | xargs kill -9`);
+    } 
+    // Освободить порт на Linux/Windows
+    else {
+      exec(`fuser -k ${PORT}/tcp`);
+    }
+    console.log(`Port ${PORT} should be free now`);
+  } catch (err) {
+    console.error(`Failed to free port: ${err}`);
+  }
+}
+
+// Запускаем сервер с обработкой ошибки EADDRINUSE
 server.listen(PORT, () => {
-  console.log('Support WebSocket server running on port', PORT);
+  console.log(`Support WebSocket server running on port ${PORT}`);
+});
+
+server.on('error', (err: any) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`Port ${PORT} is already in use. Trying to free it...`);
+    tryToFreePort();
+    // Пробуем запустить сервер снова через 1 секунду
+    setTimeout(() => {
+      server.close();
+      server.listen(PORT, () => {
+        console.log(`Support WebSocket server now running on port ${PORT}`);
+      });
+    }, 1000);
+  } else {
+    console.error(`Server error: ${err.message}`);
+  }
 });
 
 // Автоудаление старых сообщений (раз в час)

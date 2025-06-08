@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
     const offset = (page - 1) * pageSize;
 
-    let where = [];
-    let params: any[] = [];
+    const where = [];
+    const params: (string | number)[] = [];
     if (user) { where.push('u.username ILIKE $' + (params.length + 1)); params.push(`%${user}%`); }
     if (action) { where.push('l.action ILIKE $' + (params.length + 1)); params.push(`%${action}%`); }
     if (from) { where.push('l.created_at >= $' + (params.length + 1)); params.push(from); }
@@ -36,9 +36,10 @@ export async function GET(req: NextRequest) {
     const total = parseInt(totalRes[0]?.count || '0', 10);
 
     if (exportCsv) {
+      const logsArr = logs as Array<Record<string, unknown>>;
       const csv = [
         'ID,User,Action,Details,CreatedAt',
-        ...logs.map(l => `${l.id},${l.user || ''},${l.action},"${JSON.stringify(l.details || {})}",${l.created_at}`)
+        ...logsArr.map(l => `${l.id},${l.user || ''},${l.action},"${JSON.stringify(l.details || {})}",${l.created_at}`)
       ].join('\n');
       return new NextResponse(csv, {
         status: 200,
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
       });
     }
     return NextResponse.json({ logs, total });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Ошибка сервера' }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 500 });
   }
 } 

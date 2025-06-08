@@ -3,10 +3,11 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeSwitcher } from "../ui/ThemeSwitcher";
+import Image from 'next/image';
 
 const menu = [
   { href: "/companies", label: "Компании", icon: "🏢" },
-  { href: "/support", label: "Поддержка", icon: "💬" },
+  { href: "/companies/files", label: "Финансы компании", icon: "💰" },
 ];
 
 export function Sidebar() {
@@ -31,15 +32,14 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:static top-0 left-0 z-40 h-full w-4/5 max-w-xs md:w-64 bg-white/90 dark:bg-gray-900/90 shadow-lg flex flex-col p-4 sm:p-6 space-y-4
+          fixed md:sticky top-0 left-0 z-40 h-screen w-4/5 max-w-xs md:w-64 bg-white/90 dark:bg-gray-900/90 shadow-lg flex flex-col p-4 sm:p-6 space-y-4
           transition-transform duration-300 ease-in-out
           ${open ? "translate-x-0" : "-translate-x-full"}
           md:translate-x-0
         `}
-        style={{ minHeight: '100vh', backdropFilter: 'blur(8px)' }}
+        style={{ backdropFilter: 'blur(8px)' }}
       >
         <div className="text-2xl font-bold text-indigo-700 mb-8 text-gray-800 dark:text-white flex items-center gap-2">
-          <img src="/logo.png" alt="logo" className="h-10 w-10" />
           CompanySync
         </div>
         <nav className="flex flex-col space-y-2">

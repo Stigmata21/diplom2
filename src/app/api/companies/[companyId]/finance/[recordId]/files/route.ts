@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs/promises';
 
 // POST /api/companies/[companyId]/finance/[recordId]/files
-export async function POST(req: NextRequest, context: { params: { companyId: string, recordId: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function POST(req: NextRequest, context: any) {
   const params = await context.params;
   const { companyId, recordId } = params;
   const recordIdNum = Number(recordId);
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest, context: { params: { companyId: str
   if (!session?.user?.id) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
   const userId = session.user.id;
   // Проверяем права: owner/admin или автор (если pending)
-  const rows = await query<any>(
+  const rows = await query<{ author_id: string; status: string; role_in_company: string }>(
     `SELECT r.author_id, r.status, cu.role_in_company FROM finance_records r
      JOIN company_users cu ON cu.company_id = r.company_id AND cu.user_id = $1
      WHERE r.id = $2 AND r.company_id = $3`,
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest, context: { params: { companyId: str
   const url = `/uploads/${filename}`;
   try {
     console.log('Попытка вставки файла:', { recordId: recordIdNum, fileName: file.name });
-    const inserted = await query<any>(
+    const inserted = await query<{ id: number; filename: string; url: string; mimetype: string; size: number; created_at?: string }>(
       'INSERT INTO finance_files (record_id, filename, url, mimetype, size) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [recordIdNum, file.name, url, file.type || 'application/octet-stream', file.size]
     );
@@ -48,24 +49,26 @@ export async function POST(req: NextRequest, context: { params: { companyId: str
       return NextResponse.json({ error: 'Файл не был добавлен в базу (inserted пустой)' }, { status: 500 });
     }
     return NextResponse.json({ file: inserted[0] }, { status: 201 });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const error = e as { message?: string };
     console.error('Ошибка вставки файла в finance_files:', e);
-    return NextResponse.json({ error: e.message || 'Ошибка загрузки файла' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Ошибка загрузки файла' }, { status: 500 });
   }
 }
 
 // GET /api/companies/[companyId]/finance/[recordId]/files
-export async function GET(req: NextRequest, context: { params: { companyId: string, recordId: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function GET(req: NextRequest, context: any) {
   const params = await context.params;
   const { recordId } = params;
   const recordIdNum = Number(recordId);
   try {
-    const files = await query<any>(
+    const files = await query<{ id: number; filename: string; url: string; mimetype: string; size: number; created_at?: string }>(
       'SELECT id, filename, url, mimetype, size FROM finance_files WHERE record_id = $1',
       [recordIdNum]
     );
     return NextResponse.json({ files }, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Ошибка получения файлов' }, { status: 500 });
   }
 } 

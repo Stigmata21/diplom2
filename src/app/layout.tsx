@@ -7,6 +7,7 @@ import { ThemeProvider } from 'next-themes';
 import { SessionProvider } from 'next-auth/react';
 import { Toaster } from 'react-hot-toast';
 import dynamic from 'next/dynamic';
+import UserStatusChecker from '@/components/UserStatusChecker';
 
 const inter = Inter({ subsets: ['latin'] });
 const SupportChatWidget = dynamic(() => import('@/components/support/SupportChatWidget'), { ssr: false });
@@ -16,7 +17,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <html lang="ru" suppressHydrationWarning>
         <body className={inter.className}>
         <SessionProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+            <UserStatusChecker>
             <AnimatePresence mode="wait">
                 <motion.div
                     key={typeof window !== 'undefined' ? window.location.pathname : 'page'}
@@ -30,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </AnimatePresence>
             <Toaster position="top-right" />
             <SupportChatWidget />
+            </UserStatusChecker>
         </ThemeProvider>
         </SessionProvider>
         </body>

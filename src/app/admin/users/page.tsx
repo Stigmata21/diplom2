@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Skeleton } from '../../../components/ui/skeleton';
+import DeleteConfirmModal from './DeleteConfirmModal';
 
 interface User {
   id: number;
@@ -19,18 +21,22 @@ export default function AdminUsers() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const pageSize = 20;
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/admin/users?search=${encodeURIComponent(search)}&page=${page}&pageSize=${pageSize}`);
+      const params = new URLSearchParams({ search, page: String(page), pageSize: String(pageSize) });
+      const res = await fetch(`/api/admin/users?${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
       setUsers(data.users);
       setTotal(data.total);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (e) {
+      if (e instanceof Error) setError(e.message);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -45,28 +51,47 @@ export default function AdminUsers() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/admin/users/ban?id=${id}&active=${!active}`);
+      const res = await fetch(`/api/admin/users/ban`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, active: !active }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка');
       fetchUsers();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Удалить пользователя?')) return;
+  const handleDeleteClick = (user: User) => {
+    setUserToDelete(user);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false);
+    setUserToDelete(null);
+  };
+
+  const handleDelete = async () => {
+    if (!userToDelete) return;
+    
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/admin/users/delete?id=${id}`);
+      const res = await fetch(`/api/admin/users/delete?id=${userToDelete.id}`, {
+        method: 'DELETE',
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка');
       fetchUsers();
-    } catch (err: any) {
-      setError(err.message);
+      setDeleteModalOpen(false);
+      setUserToDelete(null);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -76,12 +101,16 @@ export default function AdminUsers() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/admin/users/role?id=${id}&role=${role}`);
+      const res = await fetch(`/api/admin/users/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, role }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка');
       fetchUsers();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -100,6 +129,14 @@ export default function AdminUsers() {
         <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg" onClick={fetchUsers} disabled={loading}>Поиск</button>
       </div>
       {error && <div className="text-red-500 mb-2">{error}</div>}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDelete}
+        username={userToDelete?.username || ''}
+        email={userToDelete?.email || ''}
+        isLoading={loading}
+      />
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white rounded-xl shadow text-gray-800 text-sm md:text-base">
           <thead>
@@ -146,19 +183,22 @@ export default function AdminUsers() {
                   </select>
                 </td>
                 <td className="p-3">
-                  {u.is_active ? <span className="text-green-600">Активен</span> : <span className="text-red-500">Забанен</span>}
+                  {u.is_active ? 
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">Активен</span> : 
+                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">Забанен</span>
+                  }
                 </td>
                 <td className="p-3 space-x-2">
                   <button
-                    className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-lg"
+                    className={`${u.is_active ? 'bg-yellow-400 hover:bg-yellow-500' : 'bg-blue-500 hover:bg-blue-600'} text-white px-3 py-1 rounded-lg`}
                     onClick={() => handleBan(u.id, u.is_active)}
                     disabled={loading}
                   >
-                    {u.is_active ? 'Бан' : 'Разбан'}
+                    {u.is_active ? 'Забанить' : 'Разбанить'}
                   </button>
                   <button
                     className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg"
-                    onClick={() => handleDelete(u.id)}
+                    onClick={() => handleDeleteClick(u)}
                     disabled={loading}
                   >
                     Удалить
