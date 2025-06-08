@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../auth/authOptions';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/authOptions';
 import { query } from '@/lib/db';
 
 interface QueryResult<T> {
@@ -37,14 +37,17 @@ interface Params {
 }
 
 // GET: Получение отдельной финансовой записи
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const companyId = params.id;
+    const companyId = context.params.id;
     
     // Получаем запись с проверкой доступа
     const result = await query(
@@ -68,14 +71,17 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 // PUT: Обновление финансовой записи
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const recordId = params.id;
+    const recordId = context.params.id;
     const { type, category, amount, currency, description, status } = await request.json();
 
     // Получаем текущую запись с проверкой доступа
@@ -126,14 +132,17 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 // DELETE: Удаление финансовой записи
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const recordId = params.id;
+    const recordId = context.params.id;
 
     // Получаем текущую запись с проверкой доступа
     const record = await query<FinanceRecord>(
@@ -168,14 +177,17 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const companyId = params.id;
+    const companyId = context.params.id;
     const { type, category, amount, currency, description } = await request.json();
 
     // Проверяем доступ пользователя к компании
