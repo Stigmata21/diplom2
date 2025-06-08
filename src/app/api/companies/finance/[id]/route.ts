@@ -33,141 +33,148 @@ interface CompanyUser {
 // GET: Получение отдельной финансовой записи
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const companyId = params.id;
-    
-    // Получаем запись с проверкой доступа
-    const result = await query(
-      `SELECT fr.*, u.name as author_name
-       FROM finance_records fr
-       JOIN company_users cu ON fr.company_id = cu.company_id
-       JOIN users u ON fr.author_id = u.id
-       WHERE fr.id = $1 AND cu.user_id = $2`,
-      [companyId, session.user.id]
+    const { id } = await params;
+
+    // Проверяем доступ пользователя к компании
+    const userAccessResult = await query<UserAccess>(
+      'SELECT role FROM company_users WHERE user_id = $1 AND company_id = (SELECT company_id FROM finance WHERE id = $2)',
+      [session.user.id, id]
     );
 
-    if (!result.length) {
-      return NextResponse.json({ error: 'Запись не найдена или нет доступа' }, { status: 404 });
+    if (userAccessResult.rowCount === 0) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    return NextResponse.json(result[0]);
+    // Получаем финансовую запись
+    const financeResult = await query<FinanceRecord>(
+      'SELECT * FROM finance WHERE id = $1',
+      [id]
+    );
+
+    if (financeResult.rowCount === 0) {
+      return NextResponse.json({ error: 'Finance record not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(financeResult.rows[0]);
   } catch (error) {
-    console.error('Ошибка при получении финансовых записей:', error);
-    return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 });
+    console.error('Error in GET /api/companies/finance/[id]:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
 // PUT: Обновление финансовой записи
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const recordId = params.id;
-    const { type, category, amount, currency, description, status } = await request.json();
+    const { id } = await params;
+    const body = await request.json();
 
-    // Получаем текущую запись с проверкой доступа
-    const record = await query<FinanceRecord>(
-      `SELECT fr.* FROM finance_records fr
-       JOIN company_users cu ON fr.company_id = cu.company_id
-       WHERE fr.id = $1 AND cu.user_id = $2`,
-      [recordId, session.user.id]
+    // Проверяем доступ пользователя к компании
+    const userAccessResult = await query<CompanyUser>(
+      'SELECT role_in_company FROM company_users WHERE user_id = $1 AND company_id = (SELECT company_id FROM finance WHERE id = $2)',
+      [session.user.id, id]
     );
 
-    if (!record.length) {
-      return NextResponse.json({ error: 'Запись не найдена или нет доступа' }, { status: 404 });
+    if (userAccessResult.rowCount === 0) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Обновляем запись
+    const userRole = userAccessResult.rows[0].role_in_company;
+    if (!['owner', 'admin', 'accountant'].includes(userRole)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    // Обновляем финансовую запись
     const result = await query<FinanceRecord>(
-      `UPDATE finance_records
-       SET type = $1, category = $2, amount = $3, currency = $4, description = $5, status = $6
-       WHERE id = $7
-       RETURNING *`,
+      'UPDATE finance SET type = $1, category = $2, amount = $3, currency = $4, description = $5, status = $6, updated_at = NOW() WHERE id = $7 RETURNING *',
       [
-        type || record[0].type,
-        category || record[0].category,
-        amount || record[0].amount,
-        currency || record[0].currency,
-        description || record[0].description,
-        status || record[0].status,
-        recordId
+        body.type,
+        body.category,
+        body.amount,
+        body.currency,
+        body.description,
+        body.status,
+        id
       ]
     );
 
-    // Логируем действие
-    await query(
-      `INSERT INTO activity_logs (user_id, action, details)
-       VALUES ($1, $2, $3)`,
-      [
-        session.user.id,
-        'Обновление финансовой записи',
-        JSON.stringify({ recordId, type, category, amount })
-      ]
-    );
+    if (result.rowCount === 0) {
+      return NextResponse.json({ error: 'Finance record not found' }, { status: 404 });
+    }
 
-    return NextResponse.json(result[0]);
+    return NextResponse.json(result.rows[0]);
   } catch (error) {
-    console.error('Ошибка при обновлении финансовой записи:', error);
-    return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 });
+    console.error('Error in PUT /api/companies/finance/[id]:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
 // DELETE: Удаление финансовой записи
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const recordId = params.id;
+    const { id } = await params;
 
-    // Получаем текущую запись с проверкой доступа
-    const record = await query<FinanceRecord>(
-      `SELECT fr.* FROM finance_records fr
-       JOIN company_users cu ON fr.company_id = cu.company_id
-       WHERE fr.id = $1 AND cu.user_id = $2`,
-      [recordId, session.user.id]
+    // Проверяем доступ пользователя к компании
+    const userAccessResult = await query<CompanyUser>(
+      'SELECT role_in_company FROM company_users WHERE user_id = $1 AND company_id = (SELECT company_id FROM finance WHERE id = $2)',
+      [session.user.id, id]
     );
 
-    if (!record.length) {
-      return NextResponse.json({ error: 'Запись не найдена или нет доступа' }, { status: 404 });
+    if (userAccessResult.rowCount === 0) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Удаляем запись
-    await query('DELETE FROM finance_records WHERE id = $1', [recordId]);
+    const userRole = userAccessResult.rows[0].role_in_company;
+    if (!['owner', 'admin'].includes(userRole)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
 
-    // Логируем действие
-    await query(
-      `INSERT INTO activity_logs (user_id, action, details)
-       VALUES ($1, $2, $3)`,
-      [
-        session.user.id,
-        'Удаление финансовой записи',
-        JSON.stringify({ recordId, type: record[0].type, category: record[0].category })
-      ]
+    // Удаляем финансовую запись
+    const result = await query<FinanceRecord>(
+      'DELETE FROM finance WHERE id = $1 RETURNING *',
+      [id]
     );
 
-    return NextResponse.json({ success: true });
+    if (result.rowCount === 0) {
+      return NextResponse.json({ error: 'Finance record not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(result.rows[0]);
   } catch (error) {
-    console.error('Ошибка при удалении финансовой записи:', error);
-    return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 });
+    console.error('Error in DELETE /api/companies/finance/[id]:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
