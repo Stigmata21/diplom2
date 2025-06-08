@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/authOptions';
 import { query } from '@/lib/db';
@@ -32,149 +32,128 @@ interface CompanyUser {
 
 // GET: Получение отдельной финансовой записи
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    const { id } = await params;
-
-    // Проверяем доступ пользователя к компании
-    const userAccessResult = await query<UserAccess>(
-      'SELECT role FROM company_users WHERE user_id = $1 AND company_id = (SELECT company_id FROM finance WHERE id = $2)',
-      [session.user.id, id]
-    );
-
-    if (userAccessResult.rowCount === 0) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
-    // Получаем финансовую запись
-    const financeResult = await query<FinanceRecord>(
-      'SELECT * FROM finance WHERE id = $1',
+    const id = context.params.id;
+    
+    // Получаем запись
+    const result = await query<FinanceRecord>(
+      'SELECT * FROM finance_records WHERE id = $1',
       [id]
     );
 
-    if (financeResult.rowCount === 0) {
-      return NextResponse.json({ error: 'Finance record not found' }, { status: 404 });
+    if (result.rowCount === 0) {
+      return new Response(JSON.stringify({ error: 'Record not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return NextResponse.json(financeResult.rows[0]);
+    return new Response(JSON.stringify(result.rows[0]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Error in GET /api/companies/finance/[id]:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
 
 // PUT: Обновление финансовой записи
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    const { id } = await params;
-    const body = await request.json();
+    const id = context.params.id;
+    const data = await req.json();
 
-    // Проверяем доступ пользователя к компании
-    const userAccessResult = await query<CompanyUser>(
-      'SELECT role_in_company FROM company_users WHERE user_id = $1 AND company_id = (SELECT company_id FROM finance WHERE id = $2)',
-      [session.user.id, id]
-    );
-
-    if (userAccessResult.rowCount === 0) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
-    const userRole = userAccessResult.rows[0].role_in_company;
-    if (!['owner', 'admin', 'accountant'].includes(userRole)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
-
-    // Обновляем финансовую запись
+    // Обновляем запись
     const result = await query<FinanceRecord>(
-      'UPDATE finance SET type = $1, category = $2, amount = $3, currency = $4, description = $5, status = $6, updated_at = NOW() WHERE id = $7 RETURNING *',
-      [
-        body.type,
-        body.category,
-        body.amount,
-        body.currency,
-        body.description,
-        body.status,
-        id
-      ]
+      'UPDATE finance_records SET type = $1, category = $2, amount = $3, currency = $4, description = $5, updated_at = NOW() WHERE id = $6 RETURNING *',
+      [data.type, data.category, data.amount, data.currency, data.description, id]
     );
 
     if (result.rowCount === 0) {
-      return NextResponse.json({ error: 'Finance record not found' }, { status: 404 });
+      return new Response(JSON.stringify({ error: 'Record not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return NextResponse.json(result.rows[0]);
+    return new Response(JSON.stringify(result.rows[0]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Error in PUT /api/companies/finance/[id]:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
 
 // DELETE: Удаление финансовой записи
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    const { id } = await params;
+    const id = context.params.id;
 
-    // Проверяем доступ пользователя к компании
-    const userAccessResult = await query<CompanyUser>(
-      'SELECT role_in_company FROM company_users WHERE user_id = $1 AND company_id = (SELECT company_id FROM finance WHERE id = $2)',
-      [session.user.id, id]
-    );
-
-    if (userAccessResult.rowCount === 0) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
-    const userRole = userAccessResult.rows[0].role_in_company;
-    if (!['owner', 'admin'].includes(userRole)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
-
-    // Удаляем финансовую запись
+    // Удаляем запись
     const result = await query<FinanceRecord>(
-      'DELETE FROM finance WHERE id = $1 RETURNING *',
+      'DELETE FROM finance_records WHERE id = $1 RETURNING *',
       [id]
     );
 
     if (result.rowCount === 0) {
-      return NextResponse.json({ error: 'Finance record not found' }, { status: 404 });
+      return new Response(JSON.stringify({ error: 'Record not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return NextResponse.json(result.rows[0]);
+    return new Response(JSON.stringify({ message: 'Record deleted successfully' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Error in DELETE /api/companies/finance/[id]:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
 
