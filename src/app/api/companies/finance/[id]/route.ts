@@ -30,16 +30,10 @@ interface CompanyUser {
   role_in_company: string;
 }
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
 // GET: Получение отдельной финансовой записи
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -47,7 +41,7 @@ export async function GET(
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const companyId = context.params.id;
+    const companyId = params.id;
     
     // Получаем запись с проверкой доступа
     const result = await query(
@@ -73,7 +67,7 @@ export async function GET(
 // PUT: Обновление финансовой записи
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -81,7 +75,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const recordId = context.params.id;
+    const recordId = params.id;
     const { type, category, amount, currency, description, status } = await request.json();
 
     // Получаем текущую запись с проверкой доступа
@@ -134,7 +128,7 @@ export async function PUT(
 // DELETE: Удаление финансовой записи
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -142,7 +136,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const recordId = context.params.id;
+    const recordId = params.id;
 
     // Получаем текущую запись с проверкой доступа
     const record = await query<FinanceRecord>(
@@ -179,7 +173,7 @@ export async function DELETE(
 
 export async function POST(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -187,7 +181,7 @@ export async function POST(
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const companyId = context.params.id;
+    const companyId = params.id;
     const { type, category, amount, currency, description } = await request.json();
 
     // Проверяем доступ пользователя к компании
