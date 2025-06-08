@@ -244,14 +244,6 @@ export default function Header() {
             <header className="fixed top-0 w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-4 shadow-lg z-50 backdrop-blur-sm bg-gradient-to-r from-indigo-600/95 to-blue-500/95">
                 <div className="container mx-auto px-6 flex justify-between items-center">
                     <div className="flex items-center">
-                        <Image
-                            src="/logo.webp"
-                            alt="Логотип"
-                            width={48}
-                            height={48}
-                            className="h-12 mr-3"
-                            loading="lazy"
-                        />
                         <span className="text-2xl font-bold">CompanySync</span>
                     </div>
                     <nav className="flex items-center space-x-4">

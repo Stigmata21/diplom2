@@ -68,13 +68,16 @@ export default function InvitesModal({ open, onClose }: InvitesModalProps) {
 
   const modalContent = (
     <div className="modal-overlay">
-      <div className="modal-content">
-        <button 
-          onClick={onClose} 
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-white text-2xl"
-          style={{ zIndex: 10 }}
-        >×</button>
-        <h2 className="text-xl font-bold mb-4 text-green-800 dark:text-green-400">Приглашения в компании</h2>
+      <div className="modal-content relative">
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-4 text-red-500 hover:text-red-700 dark:hover:text-red-400 text-3xl font-bold focus:outline-none focus:ring-2 focus:ring-red-400 z-20"
+          aria-label="Закрыть окно"
+          type="button"
+        >
+          ×
+        </button>
+        <h2 className="text-2xl font-bold mb-6 text-green-800 dark:text-green-400">Приглашения в компании</h2>
         {error && <div className="text-red-500 mb-2 text-sm">{error}</div>}
         {loading ? (
           <div className="text-gray-400 text-center py-8">Загрузка...</div>
