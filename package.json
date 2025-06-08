@@ -6,7 +6,7 @@
     "dev": "concurrently \"next dev --turbopack\" \"npx tsx support-ws-server.ts\"",
     "dev:next": "next dev --turbopack",
     "dev:ws": "npx tsx support-ws-server.ts",
-    "build": "next build --no-lint --no-types-check",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "support-server": "npx tsx support-ws-server.ts"
