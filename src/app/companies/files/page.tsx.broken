@@ -114,13 +114,7 @@ function FinanceContent() {
   const fetchUserCompanies = useCallback(async () => {
     try {
       const res = await fetch('/api/companies', { credentials: 'include' });
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка загрузки компаний');
       setUserCompanies(data.companies || []);
       
@@ -156,23 +150,11 @@ try {
       });
       
       if (!res.ok) {
-        let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+        const data = await res.json();
         throw new Error(data.error || 'Ошибка загрузки финансов');
       }
       
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       setRecords(data.records || []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки финансов');
@@ -196,23 +178,11 @@ try {
       });
       
       if (!res.ok) {
-        let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+        const data = await res.json();
         throw new Error(data.error || 'Ошибка загрузки отчетов');
       }
       
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       setReports(data.reports || []);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Ошибка загрузки отчетов');
@@ -253,13 +223,7 @@ try {
         }),
       });
       
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       
       if (!res.ok) {
         throw new Error(data.error || 'Ошибка при создании записи');
@@ -290,13 +254,7 @@ try {
         body: JSON.stringify(record),
       });
       
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       
       if (!res.ok) {
         throw new Error(data.error || 'Ошибка при обновлении записи');
@@ -321,13 +279,7 @@ try {
         method: 'DELETE',
       });
       
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       
       if (!res.ok) {
         throw new Error(data.error || 'Ошибка при удалении записи');
@@ -353,13 +305,7 @@ try {
         body: JSON.stringify({ status }),
       });
       
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       
       if (!res.ok) {
         throw new Error(data.error || 'Ошибка при обновлении статуса');
@@ -388,13 +334,7 @@ try {
         }),
       });
       
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       
       if (!res.ok) {
         throw new Error(data.error || 'Ошибка при создании отчета');
@@ -425,13 +365,7 @@ try {
         body: JSON.stringify(report),
       });
       
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       
       if (!res.ok) {
         throw new Error(data.error || 'Ошибка при обновлении отчета');
@@ -456,13 +390,7 @@ try {
         method: 'DELETE',
       });
       
-      let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+      const data = await res.json();
       
       if (!res.ok) {
         throw new Error(data.error || 'Ошибка при удалении отчета');
@@ -2000,13 +1928,7 @@ function FinanceReportModal({ report, onClose, onSave, companyId }: FinanceRepor
           throw new Error('Не удалось получить финансовые данные');
         }
         
-        let data;
-try {
-        data = await res.json();
-      } catch (error) {
-        console.error("JSON parse error:", error);
-        throw new Error("Ошибка при обработке ответа от сервера");
-      }
+        const data = await res.json();
         const records = data.records || [];
         
         console.log(`Получено ${records.length} финансовых записей для отчета`);
@@ -2314,10 +2236,6 @@ try {
         type: reportType,
         period,
         data: reportData
-      });
-      
-      const finalReport: Partial<FinancialReport> = {
-        title,
         type: reportType,
         period,
         data: reportData, // Убедимся, что data не будет null

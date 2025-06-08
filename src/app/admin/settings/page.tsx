@@ -8,7 +8,6 @@ interface AdminUser { id: string; name: string; }
 export default function AdminSettings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [supportEmail, setSupportEmail] = useState('');
-  const [siteTitle, setSiteTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -23,7 +22,6 @@ export default function AdminSettings() {
       .then(r => r.json())
       .then(data => {
         if (data.settings) {
-          setSiteTitle(data.settings.siteTitle || '');
           setSupportEmail(data.settings.supportEmail || '');
           setEmailNotifications(data.settings.emailNotifications !== 'false');
           setSupportAvatarUrl(data.settings.supportAvatarUrl || '/avatar-support.png');
@@ -58,7 +56,6 @@ export default function AdminSettings() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          siteTitle,
           supportEmail,
           emailNotifications: String(emailNotifications),
           supportAvatarUrl,
@@ -81,15 +78,6 @@ export default function AdminSettings() {
       <h1 className="text-2xl font-bold text-indigo-700 mb-6 text-gray-800">Настройки</h1>
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-6 max-w-xl space-y-6 text-gray-800 dark:text-white">
         {loading ? <div className="text-gray-400 dark:text-gray-300">Загрузка...</div> : <>
-        <div>
-          <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Название сайта</label>
-          <input
-            className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            value={siteTitle}
-            onChange={e => setSiteTitle(e.target.value)}
-            disabled={saving}
-          />
-        </div>
         <div>
           <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Email поддержки</label>
           <input

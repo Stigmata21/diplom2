@@ -20,7 +20,7 @@ export async function GET(
     }
 
     // Получаем и явно конвертируем params.id в строку
-    const reportId = String(params.id);
+    const reportId = String(params.id); // ID отчета для скачивания
     
     console.log('Запрос на скачивание отчета ID:', reportId);
     
@@ -59,7 +59,7 @@ export async function GET(
         return new NextResponse(fileBuffer, {
           headers: {
             'Content-Type': contentType,
-            'Content-Disposition': `inline; filename="report_${reportId}${extension}"`,
+            'Content-Disposition': `attachment; filename="report_${reportId}${extension}"`,
           },
         });
       }

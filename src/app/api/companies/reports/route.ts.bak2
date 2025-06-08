@@ -79,12 +79,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const data = await req.json(); console.log("Debug - request body:", data);
-    const { companyId, title, period, type, data: reportFromData, reportData: reportFromReportData } = data;
-    const reportData = reportFromData || reportFromReportData;
-    if (!reportData) {
-      console.log("Debug - no report data found in request");
-    }
+    const data = await req.json();
+    const { companyId, title, period, type, reportData } = data;
 
     // Логирование для отладки
     console.log('Полученные данные отчета:', { 

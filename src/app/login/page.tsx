@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { signIn } from 'next-auth/react';
 import NavButton from '../components/NavButton';
+import LoginErrorMessage from './LoginErrorMessage';
 
 export default function Login() {
     const router = useRouter();
@@ -23,12 +24,16 @@ export default function Login() {
                 email,
                 password,
             });
+            
             if (res?.error) {
-                setError(res.error === 'CredentialsSignin' ? 'Неверный email или пароль' : res.error);
+                // Добавляем немного задержки, чтобы избежать состояния гонки и дать API обработать запрос
+                const errorRes = await fetch(`/api/auth/error-messages?error=${encodeURIComponent(res.error)}`);
+                const errorData = await errorRes.json();
+                setError(errorData.message || 'Ошибка авторизации');
             } else {
                 router.refresh();
             }
-        } catch {
+        } catch (error) {
             setError('Ошибка при входе');
         } finally {
             setLoading(false);
@@ -43,7 +48,7 @@ export default function Login() {
                 className="bg-white p-8 rounded-xl shadow-xl w-full max-w-md"
             >
                 <h1 className="text-3xl font-bold text-center text-indigo-600 mb-8">Вход в систему</h1>
-                {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+                {error && <LoginErrorMessage message={error} />}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-semibold mb-1 text-gray-700">Email</label>

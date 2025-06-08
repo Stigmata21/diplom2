@@ -46,7 +46,28 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Не передан id' }, { status: 400 });
+    
+    // Удаляем все связанные данные в правильном порядке (с учетом внешних ключей)
+    // Файлы
+    await query('DELETE FROM company_files WHERE company_id = $1', [id]);
+    
+    // Задачи
+    await query('DELETE FROM company_tasks WHERE company_id = $1', [id]);
+    
+    // Финансы
+    await query('DELETE FROM company_finance_files WHERE file_id IN (SELECT id FROM company_files WHERE company_id = $1)', [id]);
+    await query('DELETE FROM company_finance WHERE company_id = $1', [id]);
+    
+    // Заметки
+    await query('DELETE FROM company_notes WHERE company_id = $1', [id]);
+    
+    // Отчеты
+    await query('DELETE FROM company_reports WHERE company_id = $1', [id]);
+    
+    // Пользователи компании
     await query('DELETE FROM company_users WHERE company_id = $1', [id]);
+    
+    // И наконец сама компания
     await query('DELETE FROM companies WHERE id = $1', [id]);
 
     // Логируем действие

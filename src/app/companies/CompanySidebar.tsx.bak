@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import EmployeesTab from "./EmployeesTab";
 import TasksTab from "./TasksTab";
 import NotesTab from "./NotesTab";
+import FinanceTab from "./FinanceTab";
 import FilesTab from './FilesTab';
 import { useSession, signOut } from 'next-auth/react';
 import { toast } from "react-hot-toast";
@@ -27,6 +28,7 @@ const TABS = [
   { key: "employees", label: "Сотрудники" },
   { key: "tasks", label: "Задачи" },
   { key: "notes", label: "Заметки" },
+  { key: "finance", label: "Финансы" },
   { key: "files", label: "Файлы" },
   { key: "settings", label: "Настройки" },
 ];
@@ -244,6 +246,9 @@ export default function CompanySidebar({ open, onClose, company, onEmployeesChan
           )}
           {activeTab === "notes" && (
             <NotesTab companyId={company.id} userId={currentUserId} />
+          )}
+          {activeTab === "finance" && (
+            <FinanceTab companyId={company.id} userId={currentUserId} userRole={currentUserCompanyRole} />
           )}
           {activeTab === "files" && (
             <FilesTab companyId={company.id} />

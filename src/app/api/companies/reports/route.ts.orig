@@ -4,9 +4,7 @@ import { authOptions } from '../../auth/authOptions';
 import { query } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from "uuid";
-import PdfPrinter from "pdfmake";
-import { TDocumentDefinitions } from "pdfmake/interfaces";
+import { v4 as uuidv4 } from 'uuid';
 
 // Определяем типы для данных из БД
 interface CompanyUser {
@@ -79,12 +77,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const data = await req.json(); console.log("Debug - request body:", data);
-    const { companyId, title, period, type, data: reportFromData, reportData: reportFromReportData } = data;
-    const reportData = reportFromData || reportFromReportData;
-    if (!reportData) {
-      console.log("Debug - no report data found in request");
-    }
+    const data = await req.json();
+    const { companyId, title, period, type, reportData } = data;
 
     // Логирование для отладки
     console.log('Полученные данные отчета:', { 
@@ -299,7 +293,7 @@ export async function POST(req: Request) {
       }
       
       // Уникальное имя файла
-      const fileName = `report_${companyId}_${uuidv4()}.pdf`;
+      const fileName = `report_${companyId}_${uuidv4()}.html`;
       const filePath = path.join(uploadsDir, fileName);
       
       // Форматируем данные для отчета
